@@ -14,7 +14,6 @@ class ONet : public BNet{
              const string& trained_file) : BNet(model_file, trained_file){}
 
         void RetrieveOutput     (std::vector<int>& shape, std::vector< std::vector <float>>& data);
-        void PreProcessMatlab   (std::vector <BBox> bounding_boxes, const string& image_name);
 };
 
 #endif
