@@ -84,9 +84,9 @@ void BNet::PreProcess(std::vector<cv::Mat>* input_channels, // will be 3 times b
                                 cv::Vec3f color_temp;
                                 
                                 // Normalize values: [-1,1]
-                                color_temp.val[0] = (color.val[0]-127.5)*0.0078125;
-                                color_temp.val[1] = (color.val[1]-127.5)*0.0078125;
-                                color_temp.val[2] = (color.val[2]-127.5)*0.0078125;
+                                color_temp.val[0] = ((float)color.val[0]-127.5)*0.0078125;
+                                color_temp.val[1] = ((float)color.val[1]-127.5)*0.0078125;
+                                color_temp.val[2] = ((float)color.val[2]-127.5)*0.0078125;
                                 
                                 // Switch from BGR to RGB
                                 color.val[0] = color_temp[2];

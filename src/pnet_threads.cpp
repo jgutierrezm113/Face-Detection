@@ -61,7 +61,7 @@ void* pnet_thread(void *i) {
                 // Pnet Forward data
                 pnet.Forward();
                 
-                // FIXME: Release mats
+                // Release mats
                 resized.release();
                 
                 std::vector<int> shape;
