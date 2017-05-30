@@ -75,29 +75,7 @@ void BNet::PreProcess(std::vector<cv::Mat>* input_channels, // will be 3 times b
         vector<cv::Mat> sample_float (imgs->size());
 
         for (unsigned int i = 0; i < imgs->size(); i++){
-                
-                imgs->at(i).convertTo(sample_float[i], CV_32FC3);
-
-                for (int y = 0; y < sample_float[i].rows; y++){
-                        for (int x = 0; x < sample_float[i].cols; x++){
-                                cv::Vec3f color = sample_float[i].at<cv::Vec3f>(cv::Point(x,y));
-                                cv::Vec3f color_temp;
-                                
-                                // Normalize values: [-1,1]
-                                color_temp.val[0] = ((float)color.val[0]-127.5)*0.0078125;
-                                color_temp.val[1] = ((float)color.val[1]-127.5)*0.0078125;
-                                color_temp.val[2] = ((float)color.val[2]-127.5)*0.0078125;
-                                
-                                // Switch from BGR to RGB
-                                color.val[0] = color_temp[2];
-                                color.val[1] = color_temp[1];
-                                color.val[2] = color_temp[0];
-                                
-                                sample_float[i].at<cv::Vec3f>(cv::Point(x,y)) = color;
-               
-                        }
-                }
-                cv::split(sample_float[i], &input_channels->at(i*3));
+                cv::split(imgs->at(i), &input_channels->at(i*3));
         }
         
         CHECK(reinterpret_cast<float*>(input_channels_org->at(0).data)

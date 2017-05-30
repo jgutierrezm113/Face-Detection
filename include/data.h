@@ -20,6 +20,14 @@ class Data {
         pthread_mutex_t *mut;
         pthread_cond_t *done;
         
+        // Timing variables
+        double total_time;
+        double preprocessing_time;
+        double pnet_time;
+        double rnet_time;
+        double onet_time;
+        
+        
         Data();
         ~Data();
 };

@@ -159,41 +159,41 @@ void padBoundingBox(std::vector <BBox> &bounding_boxes, int imgHeight, int imgWi
 
 void writeOutputImage(Data* Packet) {
  
-        int minl = min (Packet->processed_frame.rows, Packet->processed_frame.cols);
+        int minl = min (Packet->frame.rows, Packet->frame.cols);
         
         // Used so the thickness of the marks is based on the size
         // of the image
         int thickness = ceil((float) minl / 270.0);
         
         for (unsigned int i = 0; i < Packet->bounding_boxes.size(); i++) {
-                cv::rectangle(Packet->processed_frame, 
+                cv::rectangle(Packet->frame, 
                         Packet->bounding_boxes[i].p1, 
                         Packet->bounding_boxes[i].p2, 
                         cv::Scalar(255, 255, 255),
                         thickness);
         }
         for (unsigned int i = 0; i < Packet->landmarks.size(); i++) {
-                cv::circle(Packet->processed_frame, 
+                cv::circle(Packet->frame, 
                         Packet->landmarks[i].LE,
                         thickness,
                         cv::Scalar(255, 0, 0),
                         -1);
-                cv::circle(Packet->processed_frame, 
+                cv::circle(Packet->frame, 
                         Packet->landmarks[i].RE,
                         thickness,
                         cv::Scalar(255, 0, 0),
                         -1);
-                cv::circle(Packet->processed_frame, 
+                cv::circle(Packet->frame, 
                         Packet->landmarks[i].N,
                         thickness,
                         cv::Scalar(0, 255, 0),
                         -1);
-                cv::circle(Packet->processed_frame, 
+                cv::circle(Packet->frame, 
                         Packet->landmarks[i].LM,
                         thickness,
                         cv::Scalar(0, 0, 255),
                         -1);
-                cv::circle(Packet->processed_frame, 
+                cv::circle(Packet->frame, 
                         Packet->landmarks[i].RM,
                         thickness,
                         cv::Scalar(0, 0, 255),

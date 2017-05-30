@@ -5,20 +5,6 @@ using namespace std;
 using namespace caffe;
 using namespace cv;
 
-// Declaration of variables on other files  
-extern Queue ptr_queue[STAGE_COUNT];
-extern float thresholds[3];
-extern float nms_thresholds[3];
-
-extern string onet_model_file;
-extern string onet_trained_file;
-
-extern char *file_name;
-
-void* onet_thread (void *ptr){
-        
-}
-
 void* onet (void *ptr){
         
         // Receive which queue ID its supposed to access
@@ -33,9 +19,9 @@ void* onet (void *ptr){
         // Create RNET object
         ONet onet(onet_model_file, onet_trained_file);
         
-        cv::Size onet_input_geometry(48, 48);
+        cv::Size input_geometry(48, 48);
         
-        onet.SetInputGeometry(onet_input_geometry);
+        onet.SetInputGeometry(input_geometry);
           
         while (1){
                 
@@ -45,7 +31,7 @@ void* onet (void *ptr){
                 // If Valid == 0; exit pthread
                 if (Packet->type == END){
                         #if(DEBUG_ENABLED)
-                                cout << "Received Valid = 0. Exiting " << queue_id << " stage\n";
+                                printw("Received Valid = 0. Exiting %d stage\n", queue_id);
                         #endif
                         
                         // Send message to next stage
@@ -70,23 +56,17 @@ void* onet (void *ptr){
                                
                                 // Resize the cropped Image
                                 cv::Mat img_data;
-                                cv::resize(crop, img_data, onet_input_geometry);
+                                                             
+                                cv::resize(crop, img_data, input_geometry);
                                 
                                 cropBoxes.push_back(img_data);
                                 
                                 img_data.release();
-                                
                         }
                         
                         // Onet Input Setup
                         onet.FeedInput(cropBoxes);
-                        
-                        //Matlab fix
-                        //string img_name = "temp.jpg";
-                        //imwrite( img_name, Packet->frame );
-                        //onet.PreProcessMatlab (Packet->bounding_boxes, img_name);
-                        //onet.PreProcessMatlab (Packet->bounding_boxes, file_name);
-                                                
+                                    
                         // Onet Forward data
                         onet.Forward();
                         
@@ -116,17 +96,18 @@ void* onet (void *ptr){
                                         float w = Packet->bounding_boxes[j].p2.x - Packet->bounding_boxes[j].p1.x;
                                         float h = Packet->bounding_boxes[j].p2.y - Packet->bounding_boxes[j].p1.y;
 
-                                        points.LE.x = w*output_data[1][j*10+0] + Packet->bounding_boxes[j].p1.x;
-                                        points.RE.x = w*output_data[1][j*10+1] + Packet->bounding_boxes[j].p1.x;
-                                        points.N.x  = w*output_data[1][j*10+2] + Packet->bounding_boxes[j].p1.x;
-                                        points.LM.x = w*output_data[1][j*10+3] + Packet->bounding_boxes[j].p1.x;
-                                        points.RM.x = w*output_data[1][j*10+4] + Packet->bounding_boxes[j].p1.x;
+                                        // FIXME: Make this more intuitve. Fixed point position by flipping the data
+                                        points.LE.x = h*output_data[1][j*10+0] + Packet->bounding_boxes[j].p1.y;
+                                        points.RE.x = h*output_data[1][j*10+1] + Packet->bounding_boxes[j].p1.y;
+                                        points.N.x  = h*output_data[1][j*10+2] + Packet->bounding_boxes[j].p1.y;
+                                        points.LM.x = h*output_data[1][j*10+3] + Packet->bounding_boxes[j].p1.y;
+                                        points.RM.x = h*output_data[1][j*10+4] + Packet->bounding_boxes[j].p1.y;
                                         
-                                        points.LE.y = h*output_data[1][j*10+5] + Packet->bounding_boxes[j].p1.y;
-                                        points.RE.y = h*output_data[1][j*10+6] + Packet->bounding_boxes[j].p1.y;
-                                        points.N.y  = h*output_data[1][j*10+7] + Packet->bounding_boxes[j].p1.y;
-                                        points.LM.y = h*output_data[1][j*10+8] + Packet->bounding_boxes[j].p1.y;
-                                        points.RM.y = h*output_data[1][j*10+9] + Packet->bounding_boxes[j].p1.y;
+                                        points.LE.y = w*output_data[1][j*10+5] + Packet->bounding_boxes[j].p1.x;
+                                        points.RE.y = w*output_data[1][j*10+6] + Packet->bounding_boxes[j].p1.x;
+                                        points.N.y  = w*output_data[1][j*10+7] + Packet->bounding_boxes[j].p1.x;
+                                        points.LM.y = w*output_data[1][j*10+8] + Packet->bounding_boxes[j].p1.x;
+                                        points.RM.y = w*output_data[1][j*10+9] + Packet->bounding_boxes[j].p1.x;
                                         
                                         Packet->landmarks.push_back(points);
                                 }
@@ -151,12 +132,19 @@ void* onet (void *ptr){
                         for (unsigned int j = 0; j < Packet->bounding_boxes.size(); j++){
                                 
                                 // Apply BBREG
-                                float regw = Packet->bounding_boxes[j].p2.x-Packet->bounding_boxes[j].p1.x;
-                                float regh = Packet->bounding_boxes[j].p2.y-Packet->bounding_boxes[j].p1.y;
-                                correct_box[j].p1.x = Packet->bounding_boxes[j].p1.x + Packet->bounding_boxes[j].dP1.x*regw;
-                                correct_box[j].p1.y = Packet->bounding_boxes[j].p1.y + Packet->bounding_boxes[j].dP1.y*regh;
-                                correct_box[j].p2.x = Packet->bounding_boxes[j].p2.x + Packet->bounding_boxes[j].dP2.x*regw;
-                                correct_box[j].p2.y = Packet->bounding_boxes[j].p2.y + Packet->bounding_boxes[j].dP2.y*regh;
+                                float regw = -Packet->bounding_boxes[j].p2.x+Packet->bounding_boxes[j].p1.x;
+                                float regh = -Packet->bounding_boxes[j].p2.y+Packet->bounding_boxes[j].p1.y;
+                                
+                                // FIXME: Fixing positions of boxes.
+                                // Changed p1.x for p2.y and so on
+                                correct_box[j].p1.y = Packet->bounding_boxes[j].p1.x + Packet->bounding_boxes[j].dP1.x*regw;
+                                correct_box[j].p1.x = Packet->bounding_boxes[j].p1.y + Packet->bounding_boxes[j].dP1.y*regh;
+                                correct_box[j].p2.y = Packet->bounding_boxes[j].p2.x + Packet->bounding_boxes[j].dP2.x*regw;
+                                correct_box[j].p2.x = Packet->bounding_boxes[j].p2.y + Packet->bounding_boxes[j].dP2.y*regh;
+                                // correct_box[j].p1.x = Packet->bounding_boxes[j].p1.x + Packet->bounding_boxes[j].dP1.x*regw;
+                                // correct_box[j].p1.y = Packet->bounding_boxes[j].p1.y + Packet->bounding_boxes[j].dP1.y*regh;
+                                // correct_box[j].p2.x = Packet->bounding_boxes[j].p2.x + Packet->bounding_boxes[j].dP2.x*regw;
+                                // correct_box[j].p2.y = Packet->bounding_boxes[j].p2.y + Packet->bounding_boxes[j].dP2.y*regh;
                                 correct_box[j].score = Packet->bounding_boxes[j].score;
                                 
                                 // Convert Box to Square (REREQ)
@@ -178,7 +166,7 @@ void* onet (void *ptr){
                         
                         Packet->bounding_boxes.swap(correct_box);
                         
-                        // Pad generated boxes
+                        // Pad generated boxes (regular frame given they are mapped to correct input now)
                         padBoundingBox(Packet->bounding_boxes, Packet->frame.rows, Packet->frame.cols);
                 
                 }

@@ -5,20 +5,15 @@ using namespace std;
 using namespace caffe;
 using namespace cv;
 
-// timing variables in main
-extern clock_t cbegin;
-extern clock_t cend;
-
-float thresholds[3]     = {0.6, 0.6, 0.8};
-//float thresholds[3]     = {0, 0, 0};
-float nms_thresholds[3] = {0.8, 0.7, 0.3};
-//float nms_thresholds[3] = {0, 0, 0};
+float thresholds[3]     = {0.6, 0.6, 0.95};
+//float thresholds[3]     = {0.6, 0.7, 0.7};
+float nms_thresholds[3] = {0.5, 0.5, 0.3};
+//float nms_thresholds[3] = {0.7, 0.7, 0.7};
 
 // Array of queues (between stages)
-Queue ptr_queue[STAGE_COUNT];
+Queue <Data*> ptr_queue[STAGE_COUNT];
 
 // PNET
-
 int minSize = 20;
 float factor = 0.709;
 
@@ -33,6 +28,13 @@ string rnet_trained_file = "model/det2.caffemodel";
 string onet_model_file   = "model/det3.prototxt";
 string onet_trained_file = "model/det3.caffemodel";
 
+char *file_name;
+
+// Output Variables
+bool show_video;
+bool record_video;
+bool take_snapshot;
+
 void* preprocess (void *ptr) {
         
         // Receive which queue ID its supposed to access
@@ -43,35 +45,24 @@ void* preprocess (void *ptr) {
 
                 if (Packet->type == END){
                         #if(DEBUG_ENABLED)
-                                cout << "Received Valid = 0. Exiting " << queue_id << " stage\n";
+                                printw("Received Valid = 0. Exiting %d stage\n", queue_id);
                         #endif
                         ptr_queue[queue_id+1].Insert(Packet);
                         break;                        
                 }
                 
-                // Apply Histogram Equalization
-                if(Packet->frame.channels() >= 3) {
-                        Mat ycrcb;
-
-                        cvtColor(Packet->frame,ycrcb,CV_BGR2YCrCb);
-
-                        vector<Mat> channels;
-                        split(ycrcb,channels);
-
-                        equalizeHist(channels[0], channels[0]);
-
-                        Mat result;
-                        merge(channels,ycrcb);
-
-                        cvtColor(ycrcb,result,CV_YCrCb2BGR);
-                        
-                        // FIXME: REMOVE THIS
-                        Packet->frame.copyTo(Packet->processed_frame);
-                        //result.copyTo(Packet->processed_frame);
-                }
+                // Preprocess Input image (Convert to Float, Normalize, change channels, transpose)
+                cv::Mat Matfloat;
+                Packet->frame.convertTo(Matfloat, CV_32FC3);
                 
-                // TODO: Normalize image
+                cv::Mat Normalized;
+                cv::normalize(Matfloat, Normalized, -1, 1, cv::NORM_MINMAX, -1);
+                cv::cvtColor(Normalized, Normalized, cv::COLOR_BGR2RGB);
+                
+                Packet->processed_frame = Normalized.t();
+                
                 ptr_queue[queue_id+1].Insert(Packet);
+
         }
         
         // Exit
@@ -79,133 +70,129 @@ void* preprocess (void *ptr) {
 }
 
 void* output (void *ptr) {
-     
-        clock_t frameRateClkStart = 0;
-        clock_t frameRateClkEnd = 0;
-        float numberOfFrames = 0;
-        double FramesPerSecond = 0;
-        
+          
+        // OPENCV window thread for closing window
+        cv::startWindowThread();
+           
         // Receive which queue ID its supposed to access
         int queue_id = *((int *) ptr);
         
-        namedWindow("Output Image",CV_WINDOW_NORMAL); //create a window
-
+        // Will be used for img window and file writing
+        string name = config.short_file_name;
+        
+        // Local variables that serve as memories in case of swift changes
+        bool local_show_video    = 0;
+        bool local_record_video  = 0;
+        cv::VideoWriter outputVideo;
+        
+        if (config.show_video){
+                namedWindow(name.c_str(),CV_WINDOW_NORMAL); //create a window
+                local_show_video = 1;
+        }
         while (1){
                 Data* Packet = ptr_queue[queue_id].Remove();
                 
                 if (Packet->type == END){
                         delete Packet;
                         #if(DEBUG_ENABLED)
-                                cout << "Received Valid = 0. Exiting " << queue_id << " stage\n";
+                                printw("Received Valid = 0. Exiting %d stage\n", queue_id);
                         #endif
                         break;                        
                 }
 
-                int minl = min (Packet->frame.rows, Packet->frame.cols);
-                
-                // Used so the thickness of the marks is based on the size
-                // of the image
-                int thickness = ceil((float) minl / 270.0);
-                
-                for (unsigned int i = 0; i < Packet->bounding_boxes.size(); i++) {
-                        cv::rectangle(Packet->frame, 
-                                Packet->bounding_boxes[i].p1, 
-                                Packet->bounding_boxes[i].p2, 
-                                cv::Scalar(255, 255, 255),
-                                thickness);
+                // Add boxes and features to frame
+                writeOutputImage(Packet);
+
+                // Control Display
+                if (!config.show_video && local_show_video){
+                        destroyAllWindows();
+                        //waitKey(1);
+                        local_show_video = 0;
+                } else if (config.show_video && !local_show_video){
+                        namedWindow(name.c_str(),CV_WINDOW_NORMAL); //create a window
+                        local_show_video = 1;
                 }
-                for (unsigned int i = 0; i < Packet->landmarks.size(); i++) {
-                        cv::circle(Packet->frame, 
-                                Packet->landmarks[i].LE,
-                                thickness,
-                                cv::Scalar(255, 0, 0),
-                                -1);
-                        cv::circle(Packet->frame, 
-                                Packet->landmarks[i].RE,
-                                thickness,
-                                cv::Scalar(255, 0, 0),
-                                -1);
-                        cv::circle(Packet->frame, 
-                                Packet->landmarks[i].N,
-                                thickness,
-                                cv::Scalar(0, 255, 0),
-                                -1);
-                        cv::circle(Packet->frame, 
-                                Packet->landmarks[i].LM,
-                                thickness,
-                                cv::Scalar(0, 0, 255),
-                                -1);
-                        cv::circle(Packet->frame, 
-                                Packet->landmarks[i].RM,
-                                thickness,
-                                cv::Scalar(0, 0, 255),
-                                -1);
+                
+                // Show display
+                if (local_show_video){
+                        // Open window with detected objects
+                        imshow(name.c_str(), Packet->frame);
+                        resizeWindow(name.c_str(), 640, 480);
+                        
+                        // FIXME: BUG in GTK wont allow to use waitKey
+                        //waitKey(1);
+                        /* if (Packet->type == IMG){
+                                //cv::waitKey();
+                        } */
                 }
-                if (Packet->type == VID){
-                        // Show output
-                        numberOfFrames++;
-                        if (numberOfFrames==30){
-                                frameRateClkEnd = clock();
-                                double timePerFrame = (double)(frameRateClkEnd-frameRateClkStart) / CLOCKS_PER_SEC;
-                                FramesPerSecond = (double)30/timePerFrame;
-                                frameRateClkStart = frameRateClkEnd;
-                                numberOfFrames = 0;
-                        }
-                        stringstream stream;
-                        stream << "FPS: " << setprecision(4) << FramesPerSecond;
-                        //<< "Res: " << Packet->frame.size().width << "x" 
-                        //<< Packet->frame.size().height 
-                                
-                        string text = stream.str();
-                        
-                        // Add string to image
-                        int fontFace = FONT_HERSHEY_SCRIPT_SIMPLEX;
-                        double fontScale = 2;
-                        int thickness = 3;
-                        
-                        int baseline=0;
-                        Size textSize = getTextSize(text, fontFace,
-                                                    fontScale, thickness, &baseline);
-                        baseline += thickness;
-                        
-                        Point textOrg(0,textSize.height);
-                        putText(Packet->frame, text, textOrg, fontFace, fontScale,
-                        Scalar::all(255), thickness, 8);
-                        
-                        imshow("Output Image", Packet->frame);
-                        resizeWindow("Output Image", 640, 480);
-                        waitKey(1);
-                        
-                        delete Packet;
-                } else if (Packet->type == IMG){
-                        // Show output
-                        //imshow("Output", Packet->frame);
-                        cend = clock();
-                        // Print Output
-                        cout << "Execution time was: " << double(cend-cbegin) / CLOCKS_PER_SEC << endl;
-        
+
+                // Save snapshot
+                if (config.take_snapshot){
+                        config.take_snapshot = 0;  
+                        // Write timestamp on name 
+                        time_t rawtime;
+                        struct tm * timeinfo;
+                        char buffer[80];
+
+                        time (&rawtime);
+                        timeinfo = localtime(&rawtime);
+
+                        strftime(buffer,sizeof(buffer),"_%Y_%m_%d_-_%I_%M_%S",timeinfo);
+                        std::string timestamp(buffer);
+
+                        // Write output
                         stringstream ss;
-                        ss << "outputs/output.jpg";// << file ;
+                        ss << "outputs/" << config.short_file_name << timestamp << ".jpg";
                         string commS = ss.str();
-                        
-                        // remove input part
-                        //string in = "inputs/";
-                        //string::size_type i = commS.find(in);
-                        //if (i!= std::string::npos) commS.erase(i,in.length());
                         const char* comm = commS.c_str();
                         cout << "writing " << comm << endl;
                         cv::imwrite(comm, Packet->frame);
+                }                
+                
+                // Save video
+                if (config.record_video && !local_record_video){
+                        local_record_video = 1;  
                         
-                        // Open window with detected objects
-                        cv::imshow("Output Image", Packet->frame);
-                        resizeWindow("Output Image", 640, 480);
-                        cv::waitKey();                        
+                        // Set file name using timestamp 
+                        time_t rawtime;
+                        struct tm * timeinfo;
+                        char buffer[80];
+
+                        time (&rawtime);
+                        timeinfo = localtime(&rawtime);
+
+                        strftime(buffer,sizeof(buffer),"_%Y_%m_%d_-_%I_%M_%S",timeinfo);
+                        std::string timestamp(buffer);
+
+                        stringstream ss;
+                        ss << "outputs/" << config.short_file_name << timestamp << ".avi";
+                        string commS = ss.str();
+                        const char* comm = commS.c_str();
+                                               
+                        Size S = Size((int) Packet->frame.cols,    // Acquire input size
+                          (int) Packet->frame.rows);
+
+                        outputVideo.open(comm, CV_FOURCC('M','J','P','G'), fps, S, true);
+
+                        if (!outputVideo.isOpened()){
+                                printw("Could not open the output video for write: %s \n", comm);
+                                local_record_video = 0;
+                                config.record_video = 0;
+                        }
                         
-                        delete Packet;
+                        outputVideo << Packet->frame;
+                } else if (!config.record_video && local_record_video){
+                        local_record_video = 0;
+                        outputVideo.release();
+                } else if (config.record_video && local_record_video){
+                        outputVideo << Packet->frame;
                 }
+                
+                delete Packet;
+                
         }
         
         // Exit
-        destroyWindow("Output");
+        destroyAllWindows();
         pthread_exit(0);
 }

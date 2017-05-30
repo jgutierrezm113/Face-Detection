@@ -2,21 +2,21 @@
 #define DEF_H
 
 #include "include.h"
+#include "queue.h"
 
 //#define CPU_ONLY
-
-// Maximum Elements in the Queue
-#define QUEUESIZE 10
 
 // Size of the convolution box (Don't change)
 #define PNET_CONV_SIZE 12
 
+#define PNET_MAX_SCALE_COUNT 12
+
 // Number of stages in the pipeline
 #define STAGE_COUNT 5 
 
-#define DEBUG_ENABLED (0)
+#define DEBUG_ENABLED (1)
 
-enum Processing_Type { IMG, VID, CAM, DTB, TRAIN, END};
+enum Processing_Type { IMG, VID, CAM, DTB, END};
 
 typedef struct {
        // Bounding Box
@@ -38,5 +38,22 @@ typedef struct {
        cv::Point2f LM;
        cv::Point2f RM;
 } Landmark;
+
+typedef struct conf {
+        Processing_Type type;
+	bool verbose;
+	bool debug;
+        bool show_video;
+        bool record_video;
+        
+        // Only when running
+        bool take_snapshot;
+        
+        // File name for output writes
+	char *full_file_name;
+	std::string short_file_name;
+} CONF;
+
+extern CONF config;
 
 #endif

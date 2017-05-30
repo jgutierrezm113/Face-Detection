@@ -5,18 +5,6 @@ using namespace std;
 using namespace caffe;
 using namespace cv;
 
-// Declaration of variables on other files  
-extern Queue ptr_queue[STAGE_COUNT];
-extern float thresholds[3];
-extern float nms_thresholds[3];
-
-extern string rnet_model_file;
-extern string rnet_trained_file;
-
-void* rnet_thread (void *ptr){
-        
-}
-
 void* rnet (void *ptr){
         
         // Receive which queue ID its supposed to access
@@ -31,9 +19,9 @@ void* rnet (void *ptr){
         // Create RNET object
         RNet rnet(rnet_model_file, rnet_trained_file);
         
-        cv::Size rnet_input_geometry(24, 24);
+        cv::Size input_geometry(24, 24);
         
-        rnet.SetInputGeometry(rnet_input_geometry);
+        rnet.SetInputGeometry(input_geometry);
           
         while (1){
                 
@@ -43,7 +31,7 @@ void* rnet (void *ptr){
                 // If Valid == 0; exit pthread
                 if (Packet->type == END){
                         #if(DEBUG_ENABLED)
-                                cout << "Received Valid = 0. Exiting " << queue_id << " stage\n";
+                                printw("Received Valid = 0. Exiting %d stage\n", queue_id);
                         #endif
                         
                         // Send message to next stage
@@ -51,10 +39,8 @@ void* rnet (void *ptr){
                         break;                        
                 }
         
-                // FIXME: Bounding Boxes needs to be implemented into separate threads to process image.
-                // Divide it into equal sizes, but at least 8, probably 40 per thread max. Should be parametrizable too 
                 if (Packet->bounding_boxes.size() > 0){
-                        //printw("Boxes: %d\n", Packet->bounding_boxes.size());
+                        
                         // Vector of cropped images
                         vector<cv::Mat> cropBoxes;
 
@@ -70,7 +56,8 @@ void* rnet (void *ptr){
                                
                                 // Resize the cropped Image
                                 cv::Mat img_data;
-                                cv::resize(crop, img_data, rnet_input_geometry);
+                                                                
+                                cv::resize(crop, img_data, input_geometry);
                                 
                                 cropBoxes.push_back(img_data);
                                 
@@ -149,7 +136,7 @@ void* rnet (void *ptr){
                         Packet->bounding_boxes.swap(correct_box);
                         
                         // Pad generated boxes
-                        padBoundingBox(Packet->bounding_boxes, Packet->frame.rows, Packet->frame.cols);
+                        padBoundingBox(Packet->bounding_boxes, Packet->processed_frame.rows, Packet->processed_frame.cols);
                 }
                 
                 ptr_queue[queue_id+1].Insert(Packet);

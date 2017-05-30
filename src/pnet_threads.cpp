@@ -5,28 +5,19 @@ using namespace std;
 using namespace caffe;
 using namespace cv;
 
-// Declaration of variables on other files        
-extern Queue ptr_queue[STAGE_COUNT];
-extern float thresholds[3];
-extern float nms_thresholds[3];
-extern int minSize;
-extern float factor;
-
-extern string pnet_model_file;
-extern string pnet_trained_file;
-
 void* pnet_thread(void *i) {
         
+        // Process received information regarding queue and scale
+        pnet_info info = *((pnet_info *) i);
+
 #ifdef CPU_ONLY
         Caffe::set_mode(Caffe::CPU);
 #else
         Caffe::set_mode(Caffe::GPU);
 #endif
 
-        // Process received information
-        pnet_info info = *((pnet_info *) i);
         float scale = info.scale;
-        Queue* queue = info.queue;
+        Queue<Data*>* queue = info.queue;
         
         // Create PNET object
         PNet pnet(pnet_model_file, pnet_trained_file);
@@ -37,21 +28,21 @@ void* pnet_thread(void *i) {
                 
                 if (Packet->type == END){
                         #if(DEBUG_ENABLED)
-                                cout << "PNET stage exiting: " << scale << endl;
+                                //cout << "PNET stage exiting: " << scale << endl;
                         #endif
                         
                         break;
                 }
-                cv::Size pnet_input_geometry (ceil(Packet->frame.cols*scale), 
-                                      ceil(Packet->frame.rows*scale));
-                pnet.SetInputGeometry(pnet_input_geometry);
+                cv::Size input_geometry (ceil(Packet->processed_frame.cols*scale), 
+                                      ceil(Packet->processed_frame.rows*scale));
+                pnet.SetInputGeometry(input_geometry);
                 
                 // Resize the Image
                 std::vector <cv::Mat> img_data;
                 
                 cv::Mat resized;
                 
-                cv::resize(Packet->processed_frame, resized, pnet_input_geometry);
+                cv::resize(Packet->processed_frame, resized, input_geometry);
                 
                 img_data.push_back(resized);
                 
@@ -111,10 +102,8 @@ void* pnet      (void *ptr){
         
         // Set up PNET stage                
         int factor_count = 0;        
-        float minl = min (Packet->frame.rows, Packet->frame.cols);
-                
-        // FIXME: ASSIGNING STATIC scales
-        //float minl = 352;
+        float minl = min (Packet->processed_frame.rows, Packet->processed_frame.cols);
+
         float m = PNET_CONV_SIZE / (float) minSize;
 
         minl = minl*m;
@@ -122,14 +111,14 @@ void* pnet      (void *ptr){
         // Create Scale Pyramid
         std::vector<float> scales;
         
-        while (minl >= PNET_CONV_SIZE){
+        while (minl >= PNET_CONV_SIZE && factor_count < PNET_MAX_SCALE_COUNT){
                 scales.push_back(m*pow(factor,factor_count));
                 minl *= factor;
                 factor_count++;
         }
       
         // Queue (for sharing resources)
-        Queue* pnet_queue = new Queue [factor_count];
+        Queue<Data*>* pnet_queue = new Queue<Data*> [factor_count];
 
         // Create PNET threads
         pthread_t* pnet_thread_t = new pthread_t [factor_count];
@@ -152,7 +141,7 @@ void* pnet      (void *ptr){
                 // If Valid == 0; exit pthread
                 if (Packet->type == END){
                         #if(DEBUG_ENABLED)
-                                cout << "Received Valid = 0. Exiting " << queue_id << " stage\n";
+                                printw("Received Valid = 0. Exiting PNET %d stage\n", queue_id);
                         #endif
                         
                         //Insert packet into PNET queues for exiting (valid = -1)
@@ -194,8 +183,9 @@ void* pnet      (void *ptr){
                         
                         vector<BBox> correct_box(Packet->bounding_boxes.size());
                         for (unsigned int j = 0; j < Packet->bounding_boxes.size(); j++){
-                                float regw = Packet->bounding_boxes[j].p2.x-Packet->bounding_boxes[j].p1.x;
-                                float regh = Packet->bounding_boxes[j].p2.y-Packet->bounding_boxes[j].p1.y;
+                                // FIXME
+                                float regw = -Packet->bounding_boxes[j].p2.x+Packet->bounding_boxes[j].p1.x;
+                                float regh = -Packet->bounding_boxes[j].p2.y+Packet->bounding_boxes[j].p1.y;
                                 correct_box[j].p1.x = Packet->bounding_boxes[j].p1.x + Packet->bounding_boxes[j].dP1.x*regw;
                                 correct_box[j].p1.y = Packet->bounding_boxes[j].p1.y + Packet->bounding_boxes[j].dP1.y*regh;
                                 correct_box[j].p2.x = Packet->bounding_boxes[j].p2.x + Packet->bounding_boxes[j].dP2.x*regw;
@@ -222,7 +212,7 @@ void* pnet      (void *ptr){
                         Packet->bounding_boxes.swap(correct_box);
                         
                         // Pad generated boxes
-                        padBoundingBox(Packet->bounding_boxes, Packet->frame.rows, Packet->frame.cols);
+                        padBoundingBox(Packet->bounding_boxes, Packet->processed_frame.rows, Packet->processed_frame.cols);
                         
                 }
                 ptr_queue[queue_id+1].Insert(Packet);

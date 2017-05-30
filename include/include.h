@@ -22,5 +22,7 @@
 #include <vector>
 #include <numeric>
 #include <iostream>
+#include <regex>
+#include <sstream>
 
 #endif

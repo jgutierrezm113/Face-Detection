@@ -20,7 +20,7 @@ debug: GccFLAGS += -DDEBUG -g -Wall
 debug: all
 
 # Doing only one compilation, for speed purposes
-Dependencies = src/queue.cpp src/pthreads.cpp src/auxiliar.cpp src/pnet_threads.cpp src/rnet_threads.cpp src/onet_threads.cpp src/data.cpp
+Dependencies = src/pthreads.cpp src/auxiliar.cpp src/pnet_threads.cpp src/rnet_threads.cpp src/onet_threads.cpp src/data.cpp
 
 # The build target executable
 TARGET = face_detector
