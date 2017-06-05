@@ -3,7 +3,7 @@
 
 #include "def.h"
 
-// Declaration of shared global variables        
+// Declaration of shared global variables
 extern Queue <Data*> ptr_queue[STAGE_COUNT];
 extern float thresholds[3];
 extern float nms_thresholds[3];
@@ -19,4 +19,7 @@ extern string rnet_trained_file;
 extern string onet_trained_file;
 
 extern double fps;
+
+extern string output_string;
+
 #endif

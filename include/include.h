@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <ctime>
+#include <sys/timeb.h>
 #include <curses.h>
 
 #include <caffe/caffe.hpp>

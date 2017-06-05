@@ -15,8 +15,9 @@
 /*
  * Pthread functions
  */
- 
+
 void* preprocess        (void *ptr);
+void* postprocess       (void *ptr);
 void* output            (void *ptr);
 void* pnet              (void *ptr);
 void* rnet              (void *ptr);
