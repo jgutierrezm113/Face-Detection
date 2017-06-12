@@ -236,7 +236,7 @@ void* pnet      (void *ptr){
   free (pnet_thread_t);
   free (pnet_info_arg);
   // FIXME: Not sure why this free is not working
-  //delete [] pnet_queue;
+  //free (pnet_queue);
 
   // Exit
   pthread_exit(0);

@@ -13,7 +13,7 @@
 #define PNET_MAX_SCALE_COUNT 12
 
 // CAM fps
-#define CAM_FPS 30
+#define CAM_FPS 25
 
 // Number of stages in the pipeline
 #define STAGE_COUNT 6
@@ -51,6 +51,12 @@ typedef struct conf {
 	bool debug;
   bool show_video;
   bool record_video;
+
+  // To store results in log file
+  bool log_results;
+
+  // CAM ID
+  int cam_id;
 
   // Only when running
   bool take_snapshot;

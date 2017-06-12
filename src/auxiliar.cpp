@@ -208,7 +208,7 @@ double CLOCK() {
   return (t.tv_sec * 1000)+(t.tv_nsec*1e-6);
 }
 
-double avginit(){
+void avginit(){
   _fpsstart = 0;
   _fps1sec  = 0;
 }

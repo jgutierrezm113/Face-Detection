@@ -1,10 +1,16 @@
 GCC := g++
 
 RM = rm -f
- 
-CaffeLocation = /usr/local/caffe
+
+# Specify Caffe Installation
+CaffeLocation = /usr/local/caffe-3.2
 CaffeLIB = -L$(CaffeLocation)/build/lib
 CaffeINC = -I$(CaffeLocation)/include/
+
+# Specify opencv Installation
+#opencvLocation = /usr/local/opencv
+opencvLIB= -L/usr/lib
+opencvINC = -I/usr/include
 
 NetLocation = ./net
 
@@ -12,7 +18,7 @@ NetLIB = -L$(NetLocation)
 
 # g++ main.cpp queue.cpp -lpthread -lopencv_core -lopencv_imgproc -lopencv_highgui -lncurses
 GccFLAGS =  -pthread -std=c++11 -O3
-GccLibs = $(CaffeLIB) $(CaffeINC) $(NetLIB)
+GccLibs = $(CaffeLIB) $(CaffeINC) $(NetLIB) $(opencvLIB) $(opencvINC)
 
 GccLinkFLAGS = -lpthread -lprotobuf -lglog `pkg-config opencv --cflags --libs` -lboost_system -lcaffe -lnet -lncurses
 
@@ -50,4 +56,4 @@ net/onet.o: net/onet.cpp
 	$(GCC) $(CaffeINC) $(GccFLAGS) -c -fpic $< -o $@
 
 clean:
-	$(RM) $(TARGET) *.o net/*.so net/*.o *.tar* *.core* 
+	$(RM) $(TARGET) *.o net/*.so net/*.o *.tar* *.core*

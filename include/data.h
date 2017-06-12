@@ -12,6 +12,7 @@ class Data {
     // Actual Data
     cv::Mat frame;
     cv::Mat processed_frame;
+
     std::vector <BBox> bounding_boxes;
     std::vector <Landmark> landmarks;
 
@@ -23,7 +24,7 @@ class Data {
     // Timing variables
     double start_time;
     double end_time;
-    double stage_time[STAGE_COUNT-1];
+    double stage_time[STAGE_COUNT];
 
     Data();
     ~Data();

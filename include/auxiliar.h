@@ -28,7 +28,7 @@ void padBoundingBox(std::vector <BBox> &bounding_boxes,
 void writeOutputImage(Data* Packet);
 
 double CLOCK();
-double avginit();
+void avginit();
 double avgfps(double _avgfps);
 double avgdur(double newdur, double _avgdur);
 

@@ -4,10 +4,11 @@
 using namespace std;
 using namespace caffe;
 using namespace cv;
+using namespace cv::cuda;
 
 float thresholds[3]     = {0.6, 0.8, 0.95};
 //float thresholds[3]     = {0.6, 0.7, 0.7};
-float nms_thresholds[3] = {0.9, 0.9, 0.3};
+float nms_thresholds[3] = {0.5, 0.5, 0.3};
 //float nms_thresholds[3] = {0.7, 0.7, 0.7};
 
 // Array of queues (between stages)
@@ -176,25 +177,10 @@ void* postprocess (void *ptr) {
           Packet->bounding_boxes[j].p2.x = (Packet->bounding_boxes[j].p2.x + Previous.bounding_boxes[k].p2.x)/2;
           Packet->bounding_boxes[j].p2.y = (Packet->bounding_boxes[j].p2.y + Previous.bounding_boxes[k].p2.y)/2;
 
-          // FIXME: Don't average landmarks. Doesn't work well
-          // Average of landmarks as well
-          // Using p to reduce the avg impact on the landmark locations
-          // float p = 0.6;
-          // Packet->landmarks[j].LE.x = p*Packet->landmarks[j].LE.x + (1-p)*Previous.landmarks[k].LE.x;
-          // Packet->landmarks[j].LE.x = p*Packet->landmarks[j].LE.x + (1-p)*Previous.landmarks[k].LE.x;
-          // Packet->landmarks[j].RE.x = p*Packet->landmarks[j].RE.x + (1-p)*Previous.landmarks[k].RE.x;
-          // Packet->landmarks[j].RE.x = p*Packet->landmarks[j].RE.x + (1-p)*Previous.landmarks[k].RE.x;
-          // Packet->landmarks[j].N.x  = p*Packet->landmarks[j].N.x + (1-p)*Previous.landmarks[k].N.x;
-          // Packet->landmarks[j].N.x  = p*Packet->landmarks[j].N.x + (1-p)*Previous.landmarks[k].N.x;
-          // Packet->landmarks[j].LM.x = p*Packet->landmarks[j].LM.x + (1-p)*Previous.landmarks[k].LM.x;
-          // Packet->landmarks[j].LM.x = p*Packet->landmarks[j].LM.x + (1-p)*Previous.landmarks[k].LM.x;
-          // Packet->landmarks[j].RM.x = p*Packet->landmarks[j].RM.x + (1-p)*Previous.landmarks[k].RM.x;
-          // Packet->landmarks[j].RM.x = p*Packet->landmarks[j].RM.x + (1-p)*Previous.landmarks[k].RM.x;
+          // Not averaging landmarks. Doesn't work well
         }
       }
     }
-
-    // FIXME: OPENCV error: Assertion failed.
 
     // Save previous frame
     Previous = *Packet;
@@ -215,6 +201,11 @@ void* postprocess (void *ptr) {
 
 void* output (void *ptr) {
 
+  // Timer
+  #if(MEASURE_TIME)
+    double start, finish;
+  #endif
+
   // OPENCV window thread for closing window
   cv::startWindowThread();
 
@@ -226,8 +217,13 @@ void* output (void *ptr) {
 
   // Local variables that serve as memories in case of swift changes
   bool local_show_video    = 0;
+  bool local_log_results   = 0;
   bool local_record_video  = 0;
+  long int local_log_frames = 0;
+
+  // Output streams for files
   cv::VideoWriter outputVideo;
+  std::ofstream ofs;
 
   if (config.show_video){
     namedWindow(name.c_str(),CV_WINDOW_NORMAL); //create a window
@@ -241,7 +237,6 @@ void* output (void *ptr) {
     Data* Packet = ptr_queue[queue_id].Remove();
 
     if (Packet->type == END){
-
       delete Packet;
       #if(DEBUG_ENABLED)
         printw("Received Valid = 0. Exiting %d stage\n", queue_id);
@@ -249,9 +244,12 @@ void* output (void *ptr) {
       break;
     }
 
+    // Increase frame counter
+    local_log_frames++;
+
     // Record time
     #if(MEASURE_TIME)
-     	Packet->end_time = CLOCK();
+      start = CLOCK();
     #endif
 
     // Add boxes and features to frame
@@ -300,7 +298,7 @@ void* output (void *ptr) {
       ss << "outputs/" << config.short_file_name << timestamp << ".jpg";
       string commS = ss.str();
       const char* comm = commS.c_str();
-      cout << "writing " << comm << endl;
+      cout << "Writing " << comm << endl;
       cv::imwrite(comm, Packet->frame);
     }
 
@@ -345,28 +343,103 @@ void* output (void *ptr) {
       }
     }
 
+    // Record time
+   	Packet->end_time = CLOCK();
+    finish = CLOCK();
+    Packet->stage_time[queue_id] = finish - start;
+
     // Print metrics
-    #if(MEASURE_TIME)
-      std::stringstream oss;
-      _avgfps = avgfps(_avgfps);
-      double total_time = Packet->end_time - Packet->start_time;
-      _avgdur = avgdur(total_time, _avgdur);
+    std::stringstream oss;
+    _avgfps = avgfps(_avgfps);
+    double total_time = Packet->end_time - Packet->start_time;
+    _avgdur = avgdur(total_time, _avgdur);
 
-      oss << "--DATA--\n"
-          << "Average FPS:  " << _avgfps << endl
-          << "Average Time: " << _avgdur << endl
-          << "Total Time:   " << total_time << endl
-          << "PreP Time:    " << Packet->stage_time[0] << endl
-          << "PNET Time:    " << Packet->stage_time[1] << endl
-          << "RNET Time:    " << Packet->stage_time[2] << endl
-          << "ONET Time:    " << Packet->stage_time[3] << endl
-          << "PostP Time:   " << Packet->stage_time[4] << endl
+    oss << "--DATA--" << endl;
+    if (config.type != IMG){
+      oss << "Average FPS:  " << _avgfps << endl
+          << "Average Time: " << _avgdur << endl;
+    }
+    oss << "Total Time:   " << total_time << endl
+        << "PreP Time:    " << Packet->stage_time[0] << endl
+        << "PNET Time:    " << Packet->stage_time[1] << endl
+        << "RNET Time:    " << Packet->stage_time[2] << endl
+        << "ONET Time:    " << Packet->stage_time[3] << endl
+        << "PostP Time:   " << Packet->stage_time[4] << endl
+        << "Output Time:  " << Packet->stage_time[5] << endl
+        << endl;
+    output_string = oss.str();
+
+    // Write metrics to file
+    if (config.log_results && !local_log_results){
+      local_log_results = 1;
+
+      // Set file name using timestamp
+      time_t rawtime;
+      struct tm * timeinfo;
+      char buffer[80];
+
+      time (&rawtime);
+      timeinfo = localtime(&rawtime);
+
+      strftime(buffer,sizeof(buffer),"_%Y_%m_%d_-_%I_%M_%S",timeinfo);
+      std::string timestamp(buffer);
+
+      stringstream ss;
+      ss << "outputs/" << config.short_file_name << timestamp << ".csv";
+      string commS = ss.str();
+      const char* comm = commS.c_str();
+
+      // Open File for write
+      ofs.open (comm, std::ofstream::out | std::ofstream::app);
+
+      if (!ofs.is_open()){
+        cout << "Unable to open file " << comm << " for writing." << endl;
+        config.log_results = 0;
+        local_log_results = 0;
+      } else {
+        cout << "Writing " << comm << endl;
+
+        // Write First Row (with metrics)
+        ofs << "Frame Number,";
+        if (config.type != IMG){
+          ofs << "Average FPS,Average Time,";
+        }
+        ofs << "Total Time,PreP Time,PNET Time,RNET Time,ONET Time,PostP Time,Output Time" << endl;
+
+        // Write First Array
+        ofs << local_log_frames << ",";
+        if (config.type != IMG){
+          ofs << _avgfps << "," << _avgdur << ",";
+        }
+        ofs << total_time << ","
+        << Packet->stage_time[0] << ","
+        << Packet->stage_time[1] << ","
+        << Packet->stage_time[2] << ","
+        << Packet->stage_time[3] << ","
+        << Packet->stage_time[4] << ","
+        << Packet->stage_time[5] << ","
+        << endl;
+      }
+    } else if (!config.log_results && local_log_results){
+      local_log_results = 0;
+      ofs.close();
+    } else if (config.log_results && local_log_results){
+      ofs << local_log_frames << ","
+          << _avgfps << ","
+          << _avgdur << ","
+          << total_time << ","
+          << Packet->stage_time[0] << ","
+          << Packet->stage_time[1] << ","
+          << Packet->stage_time[2] << ","
+          << Packet->stage_time[3] << ","
+          << Packet->stage_time[4] << ","
+          << Packet->stage_time[5] << ","
           << endl;
-      output_string = oss.str();
-    #endif
+    }
 
-    // TODO: Write metrics to file
-    // TODO: Add control options to print metrics on screen or log file
+    if (config.type == IMG){
+      cout << output_string.c_str();
+    }
 
     delete Packet;
   }
