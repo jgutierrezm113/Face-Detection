@@ -27,10 +27,6 @@ void* pnet_thread(void *i) {
     Data* Packet = queue->Remove();
 
     if (Packet->type == END){
-      #if(DEBUG_ENABLED)
-        //cout << "PNET stage exiting: " << scale << endl;
-      #endif
-
       break;
     }
     cv::Size input_geometry (ceil(Packet->processed_frame.cols*scale),
@@ -92,10 +88,8 @@ void* pnet_thread(void *i) {
 void* pnet      (void *ptr){
 
   // Timer
-  #if(MEASURE_TIME)
-    double start, finish;
-  #endif
-
+  double start, finish;
+  
   // Receive which queue ID its supposed to access
   int queue_id = *((int *) ptr);
 
@@ -141,16 +135,11 @@ void* pnet      (void *ptr){
     Data* Packet = ptr_queue[queue_id].Remove();
 
     // Record time
-    #if(MEASURE_TIME)
-      start = CLOCK();
-    #endif
+    start = CLOCK();
 
     // If Valid == 0; exit pthread
     if (Packet->type == END){
-      //cout << "PNET end\n";
-      #if(DEBUG_ENABLED)
-        printw("Received Valid = 0. Exiting PNET %d stage\n", queue_id);
-      #endif
+      if (config.debug) printw("Received Valid = 0. Exiting %d stage\n", queue_id);
 
       //Insert packet into PNET queues for exiting (valid = -1)
       for ( int i = 0; i < factor_count; i++ ) {
@@ -224,10 +213,8 @@ void* pnet      (void *ptr){
     }
 
     // Record time
-    #if(MEASURE_TIME)
-      finish = CLOCK();
-      Packet->stage_time[queue_id] = finish - start;
-    #endif
+    finish = CLOCK();
+    Packet->stage_time[queue_id] = finish - start;
 
     ptr_queue[queue_id+1].Insert(Packet);
   }

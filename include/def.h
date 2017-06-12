@@ -18,10 +18,6 @@
 // Number of stages in the pipeline
 #define STAGE_COUNT 6
 
-#define DEBUG_ENABLED (1)
-
-#define MEASURE_TIME (1)
-
 enum Processing_Type { IMG, VID, CAM, DTB, END};
 
 typedef struct {

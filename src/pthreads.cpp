@@ -43,9 +43,7 @@ double _avgdur    = 0;
 void* preprocess (void *ptr) {
 
   // Timer
-  #if(MEASURE_TIME)
-    double start, finish;
-  #endif
+  double start, finish;
 
   // Receive which queue ID its supposed to access
   int queue_id = *((int *) ptr);
@@ -54,18 +52,13 @@ void* preprocess (void *ptr) {
     Data* Packet = ptr_queue[queue_id].Remove();
 
     if (Packet->type == END){
-      //cout << "PRE end\n";
-      #if(DEBUG_ENABLED)
-        printw("Received Valid = 0. Exiting %d stage\n", queue_id);
-      #endif
+      if (config.debug) printw("Received Valid = 0. Exiting %d stage\n", queue_id);
       ptr_queue[queue_id+1].Insert(Packet);
       break;
     }
 
     // Record time
-    #if(MEASURE_TIME)
-      start = CLOCK();
-    #endif
+    start = CLOCK();
 
     // Preprocess Input image (Convert to Float, Normalize, change channels, transpose)
     cv::Mat Matfloat;
@@ -78,10 +71,8 @@ void* preprocess (void *ptr) {
     Packet->processed_frame = Normalized.t();
 
     // Record time
-    #if(MEASURE_TIME)
-      finish = CLOCK();
-      Packet->stage_time[queue_id] = finish - start;
-    #endif
+    finish = CLOCK();
+    Packet->stage_time[queue_id] = finish - start;
 
     ptr_queue[queue_id+1].Insert(Packet);
 
@@ -94,9 +85,7 @@ void* preprocess (void *ptr) {
 void* postprocess (void *ptr) {
 
   // Timer
-  #if(MEASURE_TIME)
-    double start, finish;
-  #endif
+  double start, finish;
 
   // Previous Data Packet
   Data Previous;
@@ -108,18 +97,13 @@ void* postprocess (void *ptr) {
     Data* Packet = ptr_queue[queue_id].Remove();
 
     if (Packet->type == END){
-      //cout << "POST end\n";
-      #if(DEBUG_ENABLED)
-        printw("Received Valid = 0. Exiting %d stage\n", queue_id);
-      #endif
+      if (config.debug) printw("Received Valid = 0. Exiting %d stage\n", queue_id);
       ptr_queue[queue_id+1].Insert(Packet);
       break;
     }
 
     // Record time
-    #if(MEASURE_TIME)
-      start = CLOCK();
-    #endif
+    start = CLOCK();
 
     // Correct box coordinates to the original image
     for (unsigned int j = 0; j < Packet->bounding_boxes.size(); j++){
@@ -186,10 +170,8 @@ void* postprocess (void *ptr) {
     Previous = *Packet;
 
     // Record time
-    #if(MEASURE_TIME)
-      finish = CLOCK();
-      Packet->stage_time[queue_id] = finish - start;
-    #endif
+    finish = CLOCK();
+    Packet->stage_time[queue_id] = finish - start;
 
     ptr_queue[queue_id+1].Insert(Packet);
 
@@ -202,9 +184,7 @@ void* postprocess (void *ptr) {
 void* output (void *ptr) {
 
   // Timer
-  #if(MEASURE_TIME)
-    double start, finish;
-  #endif
+  double start, finish;
 
   // OPENCV window thread for closing window
   cv::startWindowThread();
@@ -238,9 +218,7 @@ void* output (void *ptr) {
 
     if (Packet->type == END){
       delete Packet;
-      #if(DEBUG_ENABLED)
-        printw("Received Valid = 0. Exiting %d stage\n", queue_id);
-      #endif
+      if (config.debug) printw("Received Valid = 0. Exiting %d stage\n", queue_id);
       break;
     }
 
@@ -248,9 +226,7 @@ void* output (void *ptr) {
     local_log_frames++;
 
     // Record time
-    #if(MEASURE_TIME)
-      start = CLOCK();
-    #endif
+    start = CLOCK();
 
     // Add boxes and features to frame
     writeOutputImage(Packet);

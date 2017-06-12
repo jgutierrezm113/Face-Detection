@@ -41,7 +41,7 @@ void init_conf() {
 	config.debug = false;
 	config.log_results = false;
 	config.cam_id = 0;
-  config.short_file_name = "NF";
+  config.short_file_name = "CAM";
 }
 
 int parse_arguments(int argc, char** argv) {
@@ -123,9 +123,7 @@ int main(int argc, char* argv[]) {
 	// Parse arguments
 	init_conf();
 	if ( !parse_arguments(argc, argv) ) return 0;
-	#if(DEBUG_ENABLED)
-		print_conf();
-	#endif
+	if (config.verbose) print_conf();
 
 	// Start ncurses lib
 	// Needed to process input keyboard correctly
@@ -203,25 +201,23 @@ int main(int argc, char* argv[]) {
 	      printw("Face Detection by JGM\n");
 	      printw("---------------------\n");
 
-	      #if(DEBUG_ENABLED)
-          printw("Frame size : %lf x %lf\n", dWidth, dHeight);
+	      if(config.verbose || config.debug){
+          printw("Frame size : %.2f x %.2f\n", dWidth, dHeight);
           printw("Frame rate : %lf\n", fps);
-	      #endif
+	      }
 
 	      printw("[%d] Show Video:     Press 'v' to change.\n", (config.show_video)?1:0);
 	      printw("[%d] Record Video:   Press 'r' to toggle recording.\n", (config.record_video)?1:0);
 				printw("[%d] Take Snapshot:  Press 's' to take snapshot.\n", (config.take_snapshot)?1:0);
 				printw("[%d] Write Log File: Press 'l' to toggle writing.\n", (config.log_results)?1:0);
-				if (!output_string.empty())
+				if (!output_string.empty() && (config.verbose || config.debug))
 					printw("%s", output_string.c_str());
 				printw("Press 'q' to quit.\n");
 
 	      Packet->type = VID;
 
 		    // Record time
-		    #if(MEASURE_TIME)
-		     	Packet->start_time = CLOCK();
-		    #endif
+	     	Packet->start_time = CLOCK();
 
 	      ptr_queue[0].Insert(Packet);
 
@@ -282,9 +278,7 @@ int main(int argc, char* argv[]) {
       Packet->type = IMG;
 
 	    // Record time
-	    #if(MEASURE_TIME)
-	     	Packet->start_time = CLOCK();
-	    #endif
+     	Packet->start_time = CLOCK();
 
 			ptr_queue[0].Insert(Packet);
 

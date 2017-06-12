@@ -8,10 +8,8 @@ using namespace cv;
 void* onet (void *ptr){
 
   // Timer
-  #if(MEASURE_TIME)
-    double start, finish;
-  #endif
-
+  double start, finish;
+  
   // Receive which queue ID its supposed to access
   int queue_id = *((int *) ptr);
 
@@ -35,10 +33,7 @@ void* onet (void *ptr){
 
     // If Valid == 0; exit pthread
     if (Packet->type == END){
-      //cout << "ONET end\n";
-      #if(DEBUG_ENABLED)
-        printw("Received Valid = 0. Exiting %d stage\n", queue_id);
-      #endif
+      if (config.debug) printw("Received Valid = 0. Exiting %d stage\n", queue_id);
 
       // Send message to next stage
       ptr_queue[queue_id+1].Insert(Packet);
@@ -46,9 +41,7 @@ void* onet (void *ptr){
     }
 
     // Record time
-    #if(MEASURE_TIME)
-      start = CLOCK();
-    #endif
+    start = CLOCK();
 
     if (Packet->bounding_boxes.size() > 0){
 
@@ -177,10 +170,8 @@ void* onet (void *ptr){
     }
 
     // Record time
-    #if(MEASURE_TIME)
-      finish = CLOCK();
-      Packet->stage_time[queue_id] = finish - start;
-    #endif
+    finish = CLOCK();
+    Packet->stage_time[queue_id] = finish - start;
 
     ptr_queue[queue_id+1].Insert(Packet);
   }
