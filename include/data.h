@@ -24,7 +24,7 @@ class Data {
     // Timing variables
     double start_time;
     double end_time;
-    double stage_time[STAGE_COUNT];
+    double stage_time[STAGE_COUNT+1]; // PreP-PNET-RNET-ONET-PostP-Out-Main
 
     Data();
     ~Data();

@@ -12,8 +12,10 @@
 // Limit max amount of threads running PNET stage
 #define PNET_MAX_SCALE_COUNT 12
 
-// CAM fps
+// CAM properties
 #define CAM_FPS 25
+#define FRAME_WIDTH 1920
+#define FRAME_HEIGHT 1080
 
 // Number of stages in the pipeline
 #define STAGE_COUNT 6

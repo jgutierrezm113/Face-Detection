@@ -120,6 +120,9 @@ int main(int argc, char* argv[]) {
 	cv::VideoCapture video;
 	cv::Mat img;
 
+  // Timer
+  double start, finish;
+
 	// Parse arguments
 	init_conf();
 	if ( !parse_arguments(argc, argv) ) return 0;
@@ -167,8 +170,8 @@ int main(int argc, char* argv[]) {
 			if (config.type == CAM){
 				fps = CAM_FPS;
 				video.set(CV_CAP_PROP_FPS, fps);
-				video.set(CV_CAP_PROP_FRAME_WIDTH,1920);
-				video.set(CV_CAP_PROP_FRAME_HEIGHT,1080);
+				video.set(CV_CAP_PROP_FRAME_WIDTH,FRAME_WIDTH);
+				video.set(CV_CAP_PROP_FRAME_HEIGHT,FRAME_HEIGHT);
 			} else {
 				fps = video.get(CV_CAP_PROP_FPS);
 			}
@@ -186,6 +189,10 @@ int main(int argc, char* argv[]) {
 
 				// Read packet
 	      Data* Packet = new Data;
+
+				// Record time
+				Packet->start_time = CLOCK();
+				start = CLOCK();
 
 	      bool bSuccess = video.read(Packet->frame); // read a new frame from video
 
@@ -216,8 +223,9 @@ int main(int argc, char* argv[]) {
 
 	      Packet->type = VID;
 
-		    // Record time
-	     	Packet->start_time = CLOCK();
+				// Record time
+				finish = CLOCK();
+				Packet->stage_time[STAGE_COUNT] = finish - start;
 
 	      ptr_queue[0].Insert(Packet);
 
@@ -262,23 +270,28 @@ int main(int argc, char* argv[]) {
 	  }
 	  case IMG: {
 
+			Data* Packet = new Data;
+
+			// Record time
+			Packet->start_time = CLOCK();
+			start = CLOCK();
+
       // open image file for reading
 			img = cv::imread(config.full_file_name, -1);
 			if(img.empty()){
 				//endwin();
 				cout << "Unable to decode image " << config.full_file_name << endl;
-				Data* Packet = new Data;
-	      Packet->type = END;
+			  Packet->type = END;
 	      ptr_queue[0].Insert(Packet);
 	      break;
 			}
 
-      Data* Packet = new Data;
       img.copyTo(Packet->frame);
       Packet->type = IMG;
 
-	    // Record time
-     	Packet->start_time = CLOCK();
+			// Record time
+			finish = CLOCK();
+			Packet->stage_time[STAGE_COUNT] = finish - start;
 
 			ptr_queue[0].Insert(Packet);
 
@@ -299,7 +312,7 @@ int main(int argc, char* argv[]) {
 	endwin();
 
 	// Wait for children
-	cout << "Waiting for child threads to exit successfully.\n";
+	if(config.debug) cout << "Waiting for child threads to exit successfully.\n";
 	for (int i = 0; i < STAGE_COUNT; i++){
 		pthread_join(pthreads[i], NULL);
 	}
