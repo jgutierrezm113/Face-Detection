@@ -4,7 +4,7 @@
 using namespace std;
 using namespace caffe;
 using namespace cv;
-using namespace cv::cuda;
+//using namespace cv::cuda;
 
 float thresholds[3]     = {0.6, 0.8, 0.95};
 //float thresholds[3]     = {0.6, 0.7, 0.7};
@@ -336,6 +336,7 @@ void* output (void *ptr) {
           << "Average Time: " << _avgdur << endl;
     }
     oss << "Total Time:   " << total_time << endl
+        << "Main Time:    " << Packet->stage_time[6] << endl
         << "PreP Time:    " << Packet->stage_time[0] << endl
         << "PNET Time:    " << Packet->stage_time[1] << endl
         << "RNET Time:    " << Packet->stage_time[2] << endl
@@ -380,7 +381,7 @@ void* output (void *ptr) {
         if (config.type != IMG){
           ofs << "Average FPS,Average Time,";
         }
-        ofs << "Total Time,PreP Time,PNET Time,RNET Time,ONET Time,PostP Time,Output Time" << endl;
+        ofs << "Total Time,Main Time,PreP Time,PNET Time,RNET Time,ONET Time,PostP Time,Output Time" << endl;
 
         // Write First Array
         ofs << local_log_frames << ",";
@@ -388,6 +389,7 @@ void* output (void *ptr) {
           ofs << _avgfps << "," << _avgdur << ",";
         }
         ofs << total_time << ","
+        << Packet->stage_time[6] << ","
         << Packet->stage_time[0] << ","
         << Packet->stage_time[1] << ","
         << Packet->stage_time[2] << ","
@@ -404,6 +406,7 @@ void* output (void *ptr) {
           << _avgfps << ","
           << _avgdur << ","
           << total_time << ","
+          << Packet->stage_time[6] << ","
           << Packet->stage_time[0] << ","
           << Packet->stage_time[1] << ","
           << Packet->stage_time[2] << ","
