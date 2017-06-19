@@ -8,7 +8,7 @@ using namespace cv;
 
 float thresholds[3]     = {0.6, 0.8, 0.95};
 //float thresholds[3]     = {0.6, 0.7, 0.7};
-float nms_thresholds[3] = {0.5, 0.5, 0.3};
+float nms_thresholds[3] = {0.3, 0.5, 0.3};
 //float nms_thresholds[3] = {0.7, 0.7, 0.7};
 
 // Array of queues (between stages)
