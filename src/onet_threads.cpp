@@ -9,7 +9,7 @@ void* onet (void *ptr){
 
   // Timer
   double start, finish;
-  
+
   // Receive which queue ID its supposed to access
   int queue_id = *((int *) ptr);
 
@@ -146,6 +146,7 @@ void* onet (void *ptr){
         correct_box[j].score = Packet->bounding_boxes[j].score;
 
         // Convert Box to Square (REREQ)
+        /*
         float h = correct_box[j].p2.y - correct_box[j].p1.y;
         float w = correct_box[j].p2.x - correct_box[j].p1.x;
         float l = max(w, h);
@@ -154,7 +155,7 @@ void* onet (void *ptr){
         correct_box[j].p1.y += h*0.5 - l*0.5;
         correct_box[j].p2.x = correct_box[j].p1.x + l;
         correct_box[j].p2.y = correct_box[j].p1.y + l;
-
+        */
         // Fix value to int
         correct_box[j].p1.x = floor(correct_box[j].p1.x);
         correct_box[j].p1.y = floor(correct_box[j].p1.y);
