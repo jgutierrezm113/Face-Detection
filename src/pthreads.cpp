@@ -7,14 +7,17 @@ using namespace cv;
 //using namespace cv::cuda;
 
 float thresholds[3]     = {0.6, 0.8, 0.95};
-//float thresholds[3]     = {0.6, 0.7, 0.7};
+// float thresholds[3]     = {0.5, 0.5, 0.3};
 float nms_thresholds[3] = {0.3, 0.5, 0.3};
-//float nms_thresholds[3] = {0.7, 0.7, 0.7};
+// float nms_thresholds[3] = {0.5, 0.7, 0.7};
 
 // Array of queues (between stages)
 Queue <Data*> ptr_queue[STAGE_COUNT];
 
 // PNET
+// int minSize = 10;
+// float factor = 0.79;
+
 int minSize = 20;
 float factor = 0.709;
 
@@ -48,6 +51,13 @@ void* preprocess (void *ptr) {
   // Receive which queue ID its supposed to access
   int queue_id = *((int *) ptr);
 
+  // Read StartupPacket
+  Data* Packet = ptr_queue[queue_id].Remove();
+
+  //Update Packet to say this thread is ready
+  if (Packet->type == STU)
+    Packet->IncreaseCounter();
+
   while (1){
     Data* Packet = ptr_queue[queue_id].Remove();
 
@@ -66,7 +76,11 @@ void* preprocess (void *ptr) {
 
     cv::Mat Normalized;
     cv::normalize(Matfloat, Normalized, -1, 1, cv::NORM_MINMAX, -1);
-    cv::cvtColor(Normalized, Normalized, cv::COLOR_BGR2RGB);
+
+    if (Normalized.channels() == 3 || Normalized.channels() == 4 )
+      cv::cvtColor(Normalized, Normalized, cv::COLOR_BGR2RGB);
+    else if (Normalized.channels() == 1)
+      cv::cvtColor(Normalized, Normalized, cv::COLOR_GRAY2RGB);
 
     Packet->processed_frame = Normalized.t();
 
@@ -92,6 +106,13 @@ void* postprocess (void *ptr) {
 
   // Receive which queue ID its supposed to access
   int queue_id = *((int *) ptr);
+
+  // Read StartupPacket
+  Data* Packet = ptr_queue[queue_id].Remove();
+
+  //Update Packet to say this thread is ready
+  if (Packet->type == STU)
+    Packet->IncreaseCounter();
 
   while (1){
     Data* Packet = ptr_queue[queue_id].Remove();
@@ -185,35 +206,60 @@ void* output (void *ptr) {
 
   // Timer
   double start, finish;
-
-  // OPENCV window thread for closing window
-  cv::startWindowThread();
+  double total_time;
 
   // Receive which queue ID its supposed to access
   int queue_id = *((int *) ptr);
 
+  // File name used
+  std::string file_name;
+
   // Will be used for img window and file writing
-  string name = config.short_file_name;
+  if (config.type != CAM){
+    file_name = config.full_file_name;
+    const std::regex slashrm(".*/");
+    std::stringstream result;
+    std::regex_replace(std::ostream_iterator<char>(result), file_name.begin(), file_name.end(), slashrm, "");
+    file_name = result.str();
+
+  } else {
+    file_name = "CAM";
+  }
+
+  if (config.type != DTB && config.type != IMG){
+    // OPENCV window thread for closing window
+    cv::startWindowThread();
+  }
 
   // Local variables that serve as memories in case of swift changes
-  bool local_show_video    = 0;
-  bool local_log_results   = 0;
-  bool local_record_video  = 0;
+  bool local_show_video     = 0;
+  bool local_log_results    = 0;
+  bool local_fddb_results   = 0;
+  bool local_record_video   = 0;
   long int local_log_frames = 0;
 
   // Output streams for files
   cv::VideoWriter outputVideo;
-  std::ofstream ofs;
+  std::ofstream fddb_ofs;
+  std::ofstream log_ofs;
 
   if (config.show_video){
-    namedWindow(name.c_str(),CV_WINDOW_NORMAL); //create a window
+    namedWindow(file_name.c_str(),CV_WINDOW_NORMAL); //create a window
     local_show_video = 1;
   }
 
   // Initialize AVG counters
   avginit();
 
+  // Read StartupPacket
+  Data* Packet = ptr_queue[queue_id].Remove();
+
+  //Update Packet to say this thread is ready
+  if (Packet->type == STU)
+    Packet->IncreaseCounter();
+
   while (1){
+
     Data* Packet = ptr_queue[queue_id].Remove();
 
     if (Packet->type == END){
@@ -222,34 +268,35 @@ void* output (void *ptr) {
       break;
     }
 
-    // Increase frame counter
-    local_log_frames++;
-
     // Record time
     start = CLOCK();
 
-    // Add boxes and features to frame
-    writeOutputImage(Packet);
+    // Increase frame counter
+    local_log_frames++;
 
     // Control Display
     if (!config.show_video && local_show_video){
       destroyAllWindows();
-      //waitKey(1);
       local_show_video = 0;
+
     } else if (config.show_video && !local_show_video){
-      namedWindow(name.c_str(),CV_WINDOW_NORMAL); //create a window
+      namedWindow(file_name.c_str(),CV_WINDOW_NORMAL); //create a window
       local_show_video = 1;
+
     }
 
-    // Show display
+    // Add BBoxes to image
+    writeOutputImage(Packet);
+
+    // Show Display
     if (local_show_video){
+
       // Open window with detected objects
-      imshow(name.c_str(), Packet->frame);
-      resizeWindow(name.c_str(), 640, 480);
+      imshow(file_name.c_str(), Packet->frame);
+      resizeWindow(file_name.c_str(), 640, 480);
 
       // FIXME: BUG in GTK wont allow to use waitKey
       // Image wont be desplayed when its a single image
-      //waitKey(1);
       /* if (Packet->type == IMG){
               //cv::waitKey();
       } */
@@ -257,7 +304,9 @@ void* output (void *ptr) {
 
     // Save snapshot
     if (config.take_snapshot){
-      config.take_snapshot = 0;
+      if(config.type != DTB)
+        config.take_snapshot = 0;
+
       // Write timestamp on name
       time_t rawtime;
       struct tm * timeinfo;
@@ -270,8 +319,15 @@ void* output (void *ptr) {
       std::string timestamp(buffer);
 
       // Write output
+      std::string text = Packet->name;
+      const std::regex slashrm(".*/");
+      std::stringstream result;
+      std::regex_replace(std::ostream_iterator<char>(result), text.begin(), text.end(), slashrm, "");
+      text = result.str();
+      text = text.substr(0, text.find_last_of("."));
+
       stringstream ss;
-      ss << "outputs/" << config.short_file_name << timestamp << ".jpg";
+      ss << config.output_dir << "/" << text << timestamp << ".jpg";
       string commS = ss.str();
       const char* comm = commS.c_str();
       cout << "Writing " << comm << endl;
@@ -295,7 +351,7 @@ void* output (void *ptr) {
         std::string timestamp(buffer);
 
         stringstream ss;
-        ss << "outputs/" << config.short_file_name << timestamp << ".avi";
+        ss << config.output_dir << "/" << file_name << timestamp << ".avi";
         string commS = ss.str();
         const char* comm = commS.c_str();
 
@@ -324,27 +380,33 @@ void* output (void *ptr) {
     finish = CLOCK();
     Packet->stage_time[queue_id] = finish - start;
 
-    // Print metrics
-    std::stringstream oss;
-    _avgfps = avgfps(_avgfps);
-    double total_time = Packet->end_time - Packet->start_time;
-    _avgdur = avgdur(total_time, _avgdur);
+    // Recollect Metrics
+    if(config.verbose || config.debug){
+      std::stringstream oss;
+      _avgfps = avgfps(_avgfps);
+      total_time = Packet->end_time - Packet->start_time;
+      _avgdur = avgdur(total_time, _avgdur);
 
-    oss << "--DATA--" << endl;
-    if (config.type != IMG){
-      oss << "Average FPS:  " << _avgfps << endl
-          << "Average Time: " << _avgdur << endl;
+      oss << "--DATA--" << endl;
+      if (config.type != IMG){
+        oss << "Average FPS:  " << _avgfps << endl
+        << "Average Time: " << _avgdur << endl;
+      }
+      oss << "Total Time:   " << total_time << endl
+          << "Main Time:    " << Packet->stage_time[6] << endl
+          << "PreP Time:    " << Packet->stage_time[0] << endl
+          << "PNET Time:    " << Packet->stage_time[1] << endl
+          << "RNET Time:    " << Packet->stage_time[2] << endl
+          << "ONET Time:    " << Packet->stage_time[3] << endl
+          << "PostP Time:   " << Packet->stage_time[4] << endl
+          << "Output Time:  " << Packet->stage_time[5] << endl
+          << endl;
+      output_string = oss.str();
+
+      // Print information on the processed image
+      if (config.type == IMG)
+        cout << output_string.c_str();
     }
-    oss << "Total Time:   " << total_time << endl
-        << "Main Time:    " << Packet->stage_time[6] << endl
-        << "PreP Time:    " << Packet->stage_time[0] << endl
-        << "PNET Time:    " << Packet->stage_time[1] << endl
-        << "RNET Time:    " << Packet->stage_time[2] << endl
-        << "ONET Time:    " << Packet->stage_time[3] << endl
-        << "PostP Time:   " << Packet->stage_time[4] << endl
-        << "Output Time:  " << Packet->stage_time[5] << endl
-        << endl;
-    output_string = oss.str();
 
     // Write metrics to file
     if (config.log_results && !local_log_results){
@@ -362,14 +424,14 @@ void* output (void *ptr) {
       std::string timestamp(buffer);
 
       stringstream ss;
-      ss << "outputs/" << config.short_file_name << timestamp << ".csv";
+      ss << config.output_dir << "/" << file_name << timestamp << ".csv";
       string commS = ss.str();
       const char* comm = commS.c_str();
 
       // Open File for write
-      ofs.open (comm, std::ofstream::out | std::ofstream::app);
+      log_ofs.open (comm, std::ofstream::out | std::ofstream::app);
 
-      if (!ofs.is_open()){
+      if (!log_ofs.is_open()){
         cout << "Unable to open file " << comm << " for writing." << endl;
         config.log_results = 0;
         local_log_results = 0;
@@ -377,18 +439,26 @@ void* output (void *ptr) {
         cout << "Writing " << comm << endl;
 
         // Write First Row (with metrics)
-        ofs << "Frame Number,";
-        if (config.type != IMG){
-          ofs << "Average FPS,Average Time,";
-        }
-        ofs << "Total Time,Main Time,PreP Time,PNET Time,RNET Time,ONET Time,PostP Time,Output Time" << endl;
+        if (config.type == VID)
+          log_ofs << "Frame Number,";
+        else
+          log_ofs << "Image name,";
+
+        if (config.type != IMG)
+          log_ofs << "Average FPS,Average Time,";
+
+        log_ofs << "Total Time,Main Time,PreP Time,PNET Time,RNET Time,ONET Time,PostP Time,Output Time" << endl;
 
         // Write First Array
-        ofs << local_log_frames << ",";
+        if (config.type == VID)
+          log_ofs << local_log_frames << ",";
+        else
+          log_ofs << Packet->name << ",";
+
         if (config.type != IMG){
-          ofs << _avgfps << "," << _avgdur << ",";
+          log_ofs << _avgfps << "," << _avgdur << ",";
         }
-        ofs << total_time << ","
+        log_ofs << total_time << ","
         << Packet->stage_time[6] << ","
         << Packet->stage_time[0] << ","
         << Packet->stage_time[1] << ","
@@ -400,10 +470,14 @@ void* output (void *ptr) {
       }
     } else if (!config.log_results && local_log_results){
       local_log_results = 0;
-      ofs.close();
+      log_ofs.close();
     } else if (config.log_results && local_log_results){
-      ofs << local_log_frames << ","
-          << _avgfps << ","
+      if (config.type == VID)
+        log_ofs << local_log_frames << ",";
+      else
+        log_ofs << Packet->name << ",";
+
+      log_ofs << _avgfps << ","
           << _avgdur << ","
           << total_time << ","
           << Packet->stage_time[6] << ","
@@ -416,8 +490,73 @@ void* output (void *ptr) {
           << endl;
     }
 
-    if (config.type == IMG){
-      cout << output_string.c_str();
+    // Write fddb to file
+    if (config.fddb_results && !local_fddb_results){
+      local_fddb_results = 1;
+
+      // Set file name using timestamp
+      time_t rawtime;
+      struct tm * timeinfo;
+      char buffer[80];
+
+      time (&rawtime);
+      timeinfo = localtime(&rawtime);
+
+      strftime(buffer,sizeof(buffer),"_%Y_%m_%d_-_%I_%M_%S",timeinfo);
+      std::string timestamp(buffer);
+
+      stringstream ss;
+      ss << config.output_dir << "/" << file_name << timestamp << ".txt";
+      string commS = ss.str();
+      const char* comm = commS.c_str();
+
+      // Open File for write
+      fddb_ofs.open (comm, std::ofstream::out | std::ofstream::app);
+
+      if (!fddb_ofs.is_open()){
+        cout << "Unable to open file " << comm << " for writing." << endl;
+        config.fddb_results = 0;
+        local_fddb_results = 0;
+      } else {
+        cout << "Writing " << comm << endl;
+
+        // Write Output
+        fddb_ofs << Packet->name << endl;
+        fddb_ofs << Packet->bounding_boxes.size() << endl;
+        for (uint i = 0; i< Packet->bounding_boxes.size(); i++){
+          float width  = abs(Packet->bounding_boxes[i].p1.x -
+                             Packet->bounding_boxes[i].p2.x);
+          float height = abs(Packet->bounding_boxes[i].p1.y -
+                             Packet->bounding_boxes[i].p2.y);
+          float left   = min(Packet->bounding_boxes[i].p1.x,
+                             Packet->bounding_boxes[i].p2.x);
+          float top    = min(Packet->bounding_boxes[i].p1.y,
+                             Packet->bounding_boxes[i].p2.y);
+          float score  = Packet->bounding_boxes[i].score;
+          fddb_ofs << left << " " << top << " " << width << " "
+              << height << " " << score << endl;
+        }
+      }
+    } else if (!config.fddb_results && local_fddb_results){
+      local_fddb_results = 0;
+      fddb_ofs.close();
+    } else if (config.fddb_results && local_fddb_results){
+      // Write Output
+      fddb_ofs << Packet->name << endl;
+      fddb_ofs << Packet->bounding_boxes.size() << endl;
+      for (uint i = 0; i< Packet->bounding_boxes.size(); i++){
+        float width  = abs(Packet->bounding_boxes[i].p1.x -
+                           Packet->bounding_boxes[i].p2.x);
+        float height = abs(Packet->bounding_boxes[i].p1.y -
+                           Packet->bounding_boxes[i].p2.y);
+        float left   = min(Packet->bounding_boxes[i].p1.x,
+                           Packet->bounding_boxes[i].p2.x);
+        float top    = min(Packet->bounding_boxes[i].p1.y,
+                           Packet->bounding_boxes[i].p2.y);
+        float score  = Packet->bounding_boxes[i].score;
+        fddb_ofs << left << " " << top << " " << width << " "
+            << height << " " << score << endl;
+      }
     }
 
     delete Packet;

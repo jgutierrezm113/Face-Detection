@@ -23,3 +23,19 @@ Data::~Data(){
   //pthread_cond_destroy (done);
 
 }
+
+void Data::WaitForCounter(int num){
+  // Wait for Counter to reach a certain number
+  pthread_mutex_lock(mut);
+	while (counter < num )
+		pthread_cond_wait(done, mut);
+	pthread_mutex_unlock(mut);
+}
+
+void Data::IncreaseCounter(void){
+  // Increase Counter
+  pthread_mutex_lock(mut);
+  counter++;
+  pthread_cond_signal(done);
+  pthread_mutex_unlock(mut);
+}

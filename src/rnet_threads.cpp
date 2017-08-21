@@ -9,7 +9,7 @@ void* rnet (void *ptr){
 
   // Timer
   double start, finish;
-  
+
   // Receive which queue ID its supposed to access
   int queue_id = *((int *) ptr);
 
@@ -25,6 +25,13 @@ void* rnet (void *ptr){
   cv::Size input_geometry(24, 24);
 
   rnet.SetInputGeometry(input_geometry);
+
+  // Read StartupPacket
+  Data* Packet = ptr_queue[queue_id].Remove();
+
+  //Update Packet to say this thread is ready
+  if (Packet->type == STU)
+    Packet->IncreaseCounter();
 
   while (1){
 

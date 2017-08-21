@@ -26,13 +26,19 @@ void* onet (void *ptr){
 
   onet.SetInputGeometry(input_geometry);
 
+  // Read StartupPacket
+  Data* Packet = ptr_queue[queue_id].Remove();
+
+  //Update Packet to say this thread is ready
+  if (Packet->type == STU)
+    Packet->IncreaseCounter();
+
   while (1){
 
     // Read packet from queue
     Data* Packet = ptr_queue[queue_id].Remove();
 
-    // If Valid == 0; exit pthread
-    if (Packet->type == END){
+    if (Packet->type == END || Packet->type == ILL){
       if (config.debug) printw("Received Valid = 0. Exiting %d stage\n", queue_id);
 
       // Send message to next stage
@@ -166,7 +172,7 @@ void* onet (void *ptr){
       Packet->bounding_boxes.swap(correct_box);
 
       // Pad generated boxes
-      padBoundingBox(Packet->bounding_boxes, Packet->processed_frame.rows, Packet->processed_frame.cols);
+      //padBoundingBox(Packet->bounding_boxes, Packet->processed_frame.rows, Packet->processed_frame.cols);
 
     }
 

@@ -22,6 +22,13 @@ void* pnet_thread(void *i) {
   // Create PNET object
   PNet pnet(pnet_model_file, pnet_trained_file);
 
+  // Read StartupPacket
+  Data* Packet = queue->Remove();
+
+  //Update Packet to say this thread is ready
+  if (Packet->type == STU)
+    Packet->IncreaseCounter();
+
   while(1){
     // Read packet from queue
     Data* Packet = queue->Remove();
@@ -31,6 +38,22 @@ void* pnet_thread(void *i) {
     }
     cv::Size input_geometry (ceil(Packet->processed_frame.cols*scale),
                              ceil(Packet->processed_frame.rows*scale));
+
+    // If input geometry is smaller than the conv mask size,
+    // don't execute this scale and just update the counter.
+    if (Packet->processed_frame.cols*scale < PNET_CONV_SIZE ||
+        Packet->processed_frame.rows*scale < PNET_CONV_SIZE ){
+
+      //Update Packet BBoxes
+      pthread_mutex_lock(Packet->mut);
+      Packet->counter++;
+      //if (Packet->pnet_cont == factor_count)
+      pthread_cond_signal(Packet->done);
+      pthread_mutex_unlock(Packet->mut);
+
+      continue;
+    }
+
     pnet.SetInputGeometry(input_geometry);
 
     // Resize the Image
@@ -76,7 +99,6 @@ void* pnet_thread(void *i) {
     pthread_mutex_lock(Packet->mut);
     Packet->bounding_boxes.insert(Packet->bounding_boxes.end(), chosen_boxes.begin(), chosen_boxes.end());
     Packet->counter++;
-    //if (Packet->pnet_cont == factor_count)
     pthread_cond_signal(Packet->done);
     pthread_mutex_unlock(Packet->mut);
   }
@@ -89,29 +111,21 @@ void* pnet      (void *ptr){
 
   // Timer
   double start, finish;
-  
+
   // Receive which queue ID its supposed to access
   int queue_id = *((int *) ptr);
 
-  // Receive first frame to know size of image/video
-
-  // Read packet from queue
-  Data* Packet = ptr_queue[queue_id].Snoop();
-
   // Set up PNET stage
   int factor_count = 0;
-  float minl = min (Packet->processed_frame.rows, Packet->processed_frame.cols);
-
   float m = PNET_CONV_SIZE / (float) minSize;
-
-  minl = minl*m;
 
   // Create Scale Pyramid
   std::vector<float> scales;
 
-  while (minl >= PNET_CONV_SIZE && factor_count < PNET_MAX_SCALE_COUNT){
+  //while (minl >= PNET_CONV_SIZE && factor_count < PNET_MAX_SCALE_COUNT){
+  while (factor_count < PNET_MAX_SCALE_COUNT){
     scales.push_back(m*pow(factor,factor_count));
-    minl *= factor;
+    //minl *= factor;
     factor_count++;
   }
 
@@ -127,6 +141,28 @@ void* pnet      (void *ptr){
     pnet_info_arg[i].queue = &pnet_queue[i];
 
     pthread_create(&pnet_thread_t[i], 0, pnet_thread, (void *)&pnet_info_arg[i]);
+  }
+
+  // Read StartupPacket
+  Data* Packet = ptr_queue[queue_id].Remove();
+
+  if (Packet->type == STU){
+
+    Data* StartupPacket = new Data;
+    StartupPacket->type = STU;
+
+    // Insert packet into PNET queues for processing
+    for ( int i = 0; i < factor_count; i++ ) {
+      pnet_queue[i].Insert(StartupPacket);
+    }
+
+    // Wait for children to finish setting up
+    StartupPacket->WaitForCounter(factor_count);
+
+    delete StartupPacket;
+
+    //Update Packet to say this thread is ready
+    Packet->IncreaseCounter();
   }
 
   while (1){
@@ -162,10 +198,7 @@ void* pnet      (void *ptr){
     }
 
     // Wait for children to finish processing
-    pthread_mutex_lock(Packet->mut);
-    while (Packet->counter < factor_count )
-      pthread_cond_wait(Packet->done, Packet->mut);
-    pthread_mutex_unlock(Packet->mut);
+    Packet->WaitForCounter(factor_count);
 
     // Apply NMS again
     if (Packet->bounding_boxes.size() > 0){

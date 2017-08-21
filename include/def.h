@@ -20,7 +20,13 @@
 // Number of stages in the pipeline
 #define STAGE_COUNT 6
 
-enum Processing_Type { IMG, VID, CAM, DTB, END};
+enum package_type { STU,  // Start Up Package
+                    IMG,  // Image Package
+                    VID,  // Video Package
+                    CAM,  // Camera Package
+                    DTB,  // Database Package
+                    END,  // Ending Package
+                    ILL}; // Illegal Package
 
 typedef struct {
   // Bounding Box
@@ -44,7 +50,7 @@ typedef struct {
 } Landmark;
 
 typedef struct conf {
-  Processing_Type type;
+  package_type type;
 	bool verbose;
 	bool debug;
   bool show_video;
@@ -52,6 +58,7 @@ typedef struct conf {
 
   // To store results in log file
   bool log_results;
+  bool fddb_results;
 
   // CAM ID
   int cam_id;
@@ -62,6 +69,13 @@ typedef struct conf {
   // File name for output writes
 	char *full_file_name;
 	std::string short_file_name;
+
+  // Database related information
+	char *image_dir;
+
+  // output directory
+  char *output_dir;
+
 } CONF;
 
 extern CONF config;

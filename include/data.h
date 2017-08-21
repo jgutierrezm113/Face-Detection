@@ -6,8 +6,11 @@
 
 class Data {
   public:
+    // File name
+    std::string name;
+
     // Type indicator
-    Processing_Type type;
+    package_type type;
 
     // Actual Data
     cv::Mat frame;
@@ -25,6 +28,10 @@ class Data {
     double start_time;
     double end_time;
     double stage_time[STAGE_COUNT+1]; // PreP-PNET-RNET-ONET-PostP-Out-Main
+
+    // Functions
+    void WaitForCounter(int num);
+    void IncreaseCounter(void);
 
     Data();
     ~Data();
