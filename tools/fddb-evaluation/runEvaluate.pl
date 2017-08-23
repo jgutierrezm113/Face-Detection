@@ -4,15 +4,15 @@ use strict;
 
 #### VARIABLES TO EDIT ####
 # where gnuplot is
-my $GNUPLOT = "/sw/bin/gnuplot"; 
+my $GNUPLOT = "gnuplot"; 
 # where the binary is
-my $evaluateBin = "evaluate"; 
+my $evaluateBin = "./evaluate"; 
 # where the images are
-my $imDir = "facesInTheWild/"; 
+my $imDir = "../../input/database/originalPics/"; 
 # where the folds are
-my $fddbDir = "FDDB-folds"; 
+my $fddbDir = "../../input/database/FDDB-folds/"; 
 # where the detections are
-my $detDir = "yourDetectionOutputDirectory"; 
+my $detDir = "../../outputs/fddb/"; 
 ###########################
 
 my $detFormat = 0; # 0: rectangle, 1: ellipse 2: pixels
