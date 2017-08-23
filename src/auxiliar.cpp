@@ -102,10 +102,10 @@ vector<BBox> generateBoundingBox(std::vector< std::vector <float>> data,
         BBox temp_box;
 
         // Points for Bounding Boxes
-        cv::Point p1(floor((stride*x+1)/scale),
-                     floor((stride*y+1)/scale));
-        cv::Point p2(floor((stride*x+cellsize-1+1)/scale),
-                     floor((stride*y+cellsize-1+1)/scale));
+        cv::Point p1(floor((stride*x)/scale),
+                     floor((stride*y)/scale));
+        cv::Point p2(floor((stride*x+cellsize-1)/scale),
+                     floor((stride*y+cellsize-1)/scale));
 
         temp_box.p1 = p1;
         temp_box.p2 = p2;
@@ -114,10 +114,10 @@ vector<BBox> generateBoundingBox(std::vector< std::vector <float>> data,
         temp_box.score = data[1][(shape_map[2] + y) * shape_map[3] + x];
 
         // Reg (dx1,dy1,dx2,dy2)
-        cv::Point dp1 (data[0][(0*shape_map[2] + y) * shape_map[3] + x],
-                       data[0][(1*shape_map[2] + y) * shape_map[3] + x]);
-        cv::Point dp2 (data[0][(2*shape_map[2] + y) * shape_map[3] + x],
-                       data[0][(3*shape_map[2] + y) * shape_map[3] + x]);
+        cv::Point dp1 (data[0][(1*shape_map[2] + y) * shape_map[3] + x],
+                       data[0][(0*shape_map[2] + y) * shape_map[3] + x]);
+        cv::Point dp2 (data[0][(3*shape_map[2] + y) * shape_map[3] + x],
+                       data[0][(2*shape_map[2] + y) * shape_map[3] + x]);
 
         temp_box.dP1 = dp1;
         temp_box.dP2 = dp2;

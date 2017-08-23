@@ -27,6 +27,7 @@ void* onet              (void *ptr);
 typedef struct {
         Queue <Data*> * queue;
         float scale;
+        int scale_num;
 } pnet_info;
 
 #endif

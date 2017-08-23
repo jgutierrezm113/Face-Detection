@@ -96,11 +96,16 @@ void* rnet (void *ptr){
         if (output_data[0][j*2+1] > thresholds[1]){
 
           // Saving mv output data in boxes extra information
-          Packet->bounding_boxes[j].dP1.x = output_data[1][j*4+0];
-          Packet->bounding_boxes[j].dP1.y = output_data[1][j*4+1];
-          Packet->bounding_boxes[j].dP2.x = output_data[1][j*4+2];
-          Packet->bounding_boxes[j].dP2.y = output_data[1][j*4+3];
+          Packet->bounding_boxes[j].dP1.x = output_data[1][j*4+1];
+          Packet->bounding_boxes[j].dP1.y = output_data[1][j*4+0];
+          Packet->bounding_boxes[j].dP2.x = output_data[1][j*4+3];
+          Packet->bounding_boxes[j].dP2.y = output_data[1][j*4+2];
           Packet->bounding_boxes[j].score = output_data[0][j*2+1];
+          /*Packet->bounding_boxes[j].dP1.x = output_data[1][j];
+          Packet->bounding_boxes[j].dP1.y = output_data[1][Packet->bounding_boxes.size()+j];
+          Packet->bounding_boxes[j].dP2.x = output_data[1][Packet->bounding_boxes.size()*2+j];
+          Packet->bounding_boxes[j].dP2.y = output_data[1][Packet->bounding_boxes.size()*3+j];
+          */
           chosen_boxes.push_back(Packet->bounding_boxes[j]);
         }
       }

@@ -42,15 +42,11 @@ void* pnet_thread(void *i) {
     // If input geometry is smaller than the conv mask size,
     // don't execute this scale and just update the counter.
     if (Packet->processed_frame.cols*scale < PNET_CONV_SIZE ||
-        Packet->processed_frame.rows*scale < PNET_CONV_SIZE ){
+        Packet->processed_frame.cols*scale > 3000 ||
+        Packet->processed_frame.rows*scale < PNET_CONV_SIZE ||
+        Packet->processed_frame.rows*scale > 3000 ){
 
-      //Update Packet BBoxes
-      pthread_mutex_lock(Packet->mut);
-      Packet->counter++;
-      //if (Packet->pnet_cont == factor_count)
-      pthread_cond_signal(Packet->done);
-      pthread_mutex_unlock(Packet->mut);
-
+      Packet->IncreaseCounter();
       continue;
     }
 
@@ -213,8 +209,9 @@ void* pnet      (void *ptr){
 
       vector<BBox> correct_box(Packet->bounding_boxes.size());
       for (unsigned int j = 0; j < Packet->bounding_boxes.size(); j++){
-        float regw = -Packet->bounding_boxes[j].p2.x+Packet->bounding_boxes[j].p1.x;
-        float regh = -Packet->bounding_boxes[j].p2.y+Packet->bounding_boxes[j].p1.y;
+        // BBOX Regression
+        float regw = Packet->bounding_boxes[j].p2.x-Packet->bounding_boxes[j].p1.x;
+        float regh = Packet->bounding_boxes[j].p2.y-Packet->bounding_boxes[j].p1.y;
         correct_box[j].p1.x = Packet->bounding_boxes[j].p1.x + Packet->bounding_boxes[j].dP1.x*regw;
         correct_box[j].p1.y = Packet->bounding_boxes[j].p1.y + Packet->bounding_boxes[j].dP1.y*regh;
         correct_box[j].p2.x = Packet->bounding_boxes[j].p2.x + Packet->bounding_boxes[j].dP2.x*regw;

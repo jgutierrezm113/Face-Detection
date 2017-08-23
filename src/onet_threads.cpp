@@ -94,10 +94,10 @@ void* onet (void *ptr){
         if (output_data[2][j*2+1] > thresholds[2]){
 
           // Saving mv output data in boxes extra information
-          Packet->bounding_boxes[j].dP1.x = output_data[0][j*4+0];
-          Packet->bounding_boxes[j].dP1.y = output_data[0][j*4+1];
-          Packet->bounding_boxes[j].dP2.x = output_data[0][j*4+2];
-          Packet->bounding_boxes[j].dP2.y = output_data[0][j*4+3];
+          Packet->bounding_boxes[j].dP1.x = output_data[0][j*4+1];
+          Packet->bounding_boxes[j].dP1.y = output_data[0][j*4+0];
+          Packet->bounding_boxes[j].dP2.x = output_data[0][j*4+3];
+          Packet->bounding_boxes[j].dP2.y = output_data[0][j*4+2];
           Packet->bounding_boxes[j].score = output_data[2][j*2+1];
           chosen_boxes.push_back(Packet->bounding_boxes[j]);
 
@@ -126,6 +126,22 @@ void* onet (void *ptr){
 
     }
     if (Packet->bounding_boxes.size() > 0){
+
+      vector<BBox> correct_box(Packet->bounding_boxes.size());
+      for (unsigned int j = 0; j < Packet->bounding_boxes.size(); j++){
+
+        // Apply BBREG
+        float regw = Packet->bounding_boxes[j].p2.x-Packet->bounding_boxes[j].p1.x;
+        float regh = Packet->bounding_boxes[j].p2.y-Packet->bounding_boxes[j].p1.y;
+
+        correct_box[j].p1.x = Packet->bounding_boxes[j].p1.x + bbox_adjust_percentage*Packet->bounding_boxes[j].dP1.x*regw;
+        correct_box[j].p1.y = Packet->bounding_boxes[j].p1.y + bbox_adjust_percentage*Packet->bounding_boxes[j].dP1.y*regh;
+        correct_box[j].p2.x = Packet->bounding_boxes[j].p2.x + bbox_adjust_percentage*Packet->bounding_boxes[j].dP2.x*regw;
+        correct_box[j].p2.y = Packet->bounding_boxes[j].p2.y + bbox_adjust_percentage*Packet->bounding_boxes[j].dP2.y*regh;
+        correct_box[j].score = Packet->bounding_boxes[j].score;
+      }
+      Packet->bounding_boxes.swap(correct_box);
+
       vector<int> pick = nms (Packet->bounding_boxes, nms_thresholds[2], 1);
       // Select chosen boxes, update bounding_boxes vector
       vector<BBox> chosen_boxes;
@@ -137,42 +153,6 @@ void* onet (void *ptr){
 
       Packet->bounding_boxes.swap(chosen_boxes);
       Packet->landmarks.swap(chosen_points);
-
-      vector<BBox> correct_box(Packet->bounding_boxes.size());
-      for (unsigned int j = 0; j < Packet->bounding_boxes.size(); j++){
-
-        // Apply BBREG
-        float regw = -Packet->bounding_boxes[j].p2.x+Packet->bounding_boxes[j].p1.x;
-        float regh = -Packet->bounding_boxes[j].p2.y+Packet->bounding_boxes[j].p1.y;
-
-        correct_box[j].p1.x = Packet->bounding_boxes[j].p1.x + Packet->bounding_boxes[j].dP1.x*regw;
-        correct_box[j].p1.y = Packet->bounding_boxes[j].p1.y + Packet->bounding_boxes[j].dP1.y*regh;
-        correct_box[j].p2.x = Packet->bounding_boxes[j].p2.x + Packet->bounding_boxes[j].dP2.x*regw;
-        correct_box[j].p2.y = Packet->bounding_boxes[j].p2.y + Packet->bounding_boxes[j].dP2.y*regh;
-        correct_box[j].score = Packet->bounding_boxes[j].score;
-
-        // Convert Box to Square (REREQ)
-        /*
-        float h = correct_box[j].p2.y - correct_box[j].p1.y;
-        float w = correct_box[j].p2.x - correct_box[j].p1.x;
-        float l = max(w, h);
-
-        correct_box[j].p1.x += w*0.5 - l*0.5;
-        correct_box[j].p1.y += h*0.5 - l*0.5;
-        correct_box[j].p2.x = correct_box[j].p1.x + l;
-        correct_box[j].p2.y = correct_box[j].p1.y + l;
-        */
-        // Fix value to int
-        correct_box[j].p1.x = floor(correct_box[j].p1.x);
-        correct_box[j].p1.y = floor(correct_box[j].p1.y);
-        correct_box[j].p2.x = floor(correct_box[j].p2.x);
-        correct_box[j].p2.y = floor(correct_box[j].p2.y);
-      }
-
-      Packet->bounding_boxes.swap(correct_box);
-
-      // Pad generated boxes
-      //padBoundingBox(Packet->bounding_boxes, Packet->processed_frame.rows, Packet->processed_frame.cols);
 
     }
 

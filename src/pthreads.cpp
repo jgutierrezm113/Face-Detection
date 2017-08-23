@@ -6,9 +6,9 @@ using namespace caffe;
 using namespace cv;
 //using namespace cv::cuda;
 
-float thresholds[3]     = {0.6, 0.8, 0.95};
+float thresholds[3]     = {0.5, 0.8, 0.85};
 // float thresholds[3]     = {0.5, 0.5, 0.3};
-float nms_thresholds[3] = {0.3, 0.5, 0.3};
+float nms_thresholds[3] = {0.5, 0.5, 0.3};
 // float nms_thresholds[3] = {0.5, 0.7, 0.7};
 
 // Array of queues (between stages)
@@ -20,6 +20,10 @@ Queue <Data*> ptr_queue[STAGE_COUNT];
 
 int minSize = 20;
 float factor = 0.709;
+
+// ONET
+// Bounding Box Regression effect (to reduce it)
+float bbox_adjust_percentage = 1;
 
 string pnet_model_file   = "model/det1.prototxt";
 string pnet_trained_file = "model/det1.caffemodel";
@@ -319,7 +323,11 @@ void* output (void *ptr) {
       std::string timestamp(buffer);
 
       // Write output
-      std::string text = Packet->name;
+      std::string text;
+      if (config.type != IMG)
+        text = Packet->name;
+      else // IMG use file_name
+        text = file_name;
       const std::regex slashrm(".*/");
       std::stringstream result;
       std::regex_replace(std::ostream_iterator<char>(result), text.begin(), text.end(), slashrm, "");
@@ -387,19 +395,19 @@ void* output (void *ptr) {
       total_time = Packet->end_time - Packet->start_time;
       _avgdur = avgdur(total_time, _avgdur);
 
-      oss << "--DATA--" << endl;
+      oss << std::setprecision(3) << std::fixed << "Data\n----" << endl;
       if (config.type != IMG){
-        oss << "Average FPS:  " << _avgfps << endl
-        << "Average Time: " << _avgdur << endl;
+        oss << "Average FPS :  " << _avgfps << endl
+          <<   "Average Time:  " << _avgdur << endl;
       }
-      oss << "Total Time:   " << total_time << endl
-          << "Main Time:    " << Packet->stage_time[6] << endl
-          << "PreP Time:    " << Packet->stage_time[0] << endl
-          << "PNET Time:    " << Packet->stage_time[1] << endl
-          << "RNET Time:    " << Packet->stage_time[2] << endl
-          << "ONET Time:    " << Packet->stage_time[3] << endl
-          << "PostP Time:   " << Packet->stage_time[4] << endl
-          << "Output Time:  " << Packet->stage_time[5] << endl
+      oss << "Total Time  :  " << total_time << endl
+          << "Main Time   :  " << Packet->stage_time[6] << endl
+          << "PreP Time   :  " << Packet->stage_time[0] << endl
+          << "PNET Time   :  " << Packet->stage_time[1] << endl
+          << "RNET Time   :  " << Packet->stage_time[2] << endl
+          << "ONET Time   :  " << Packet->stage_time[3] << endl
+          << "PostP Time  :  " << Packet->stage_time[4] << endl
+          << "Output Time :  " << Packet->stage_time[5] << endl
           << endl;
       output_string = oss.str();
 

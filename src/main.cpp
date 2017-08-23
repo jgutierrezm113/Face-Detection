@@ -88,6 +88,7 @@ int parse_arguments(int argc, char** argv) {
 			config.full_file_name = argv[i];
 			++i;
 			config.image_dir = argv[i];
+			config.short_file_name = argv[i];
 			if (config.type == ILL)
       	config.type = DTB;
 			// Due to OS bug
@@ -170,6 +171,7 @@ int parse_arguments(int argc, char** argv) {
 }
 
 void print_conf() {
+        fprintf(stderr, "\n--------------");
         fprintf(stderr, "\nCONFIGURATION:\n");
         fprintf(stderr, "- Processing Type %d\n", config.type);
         fprintf(stderr, "- Show Video:     %d\n", config.show_video);
@@ -179,8 +181,11 @@ void print_conf() {
         fprintf(stderr, "- Write FDDB Log: %d\n", config.fddb_results);
         fprintf(stderr, "- File Name:      %s\n", config.short_file_name.c_str());
         fprintf(stderr, "- Output Dir:     %s\n", config.output_dir);
-        if (config.verbose && config.debug) fprintf(stderr, "- verbose mode\n");
-        if (config.debug) fprintf(stderr, "- debug mode\n");
+        if (config.verbose && config.debug)
+					fprintf(stderr, "- verbose mode\n");
+        if (config.debug)
+					fprintf(stderr, "- debug mode\n");
+        fprintf(stderr, "--------------\n");
 }
 
 int main(int argc, char* argv[]) {
@@ -190,6 +195,8 @@ int main(int argc, char* argv[]) {
 
   // Timer
   double start, finish;
+	double total_start;
+	double total_start_with_setup = CLOCK();
 
 	// Parse arguments
 	init_conf();
@@ -221,6 +228,8 @@ int main(int argc, char* argv[]) {
 	StartupPacket->WaitForCounter(STAGE_COUNT);
 
 	delete StartupPacket;
+
+	total_start = CLOCK();
 
 	switch (config.type){
 	  case CAM:
@@ -263,22 +272,25 @@ int main(int argc, char* argv[]) {
       while (!finished){
 
 				// Wait for a little while (not full fps) before grabing next frame
-				timeout (950/fps);
+				if(config.type == VID)
+					timeout (950/fps);
 
 	      // Control screen
 	      clear();
-	      printw("Face Detection by JGM\n");
-	      printw("---------------------\n");
+	      printw("Heterogeneous Framework for Face Detection \nby Julian Gutierrez\n");
+	      printw("------------------------------------------\n");
 
 	      if(config.verbose || config.debug){
-          printw("Frame size : %.2f x %.2f\n", dWidth, dHeight);
-          printw("Frame rate : %lf\n", fps);
+          printw("Frame size        : %.2f x %.2f\n", dWidth, dHeight);
+          printw("Frame rate        : %.2f\n", fps);
+					printw("Current Runtime   : %.3f s\n", (CLOCK() - total_start_with_setup)/1000);
 	      }
 
-	      printw("[%d] Show Video:     Press 'v' to change.\n", (config.show_video)?1:0);
-	      printw("[%d] Record Video:   Press 'r' to toggle recording.\n", (config.record_video)?1:0);
-				printw("[%d] Take Snapshot:  Press 's' to take snapshot.\n", (config.take_snapshot)?1:0);
-				printw("[%d] Write Log File: Press 'l' to toggle writing.\n", (config.log_results)?1:0);
+	      printw("[%d] Show Video     : Press 'v' to change.\n", (config.show_video)?1:0);
+	      printw("[%d] Record Video   : Press 'r' to toggle recording.\n", (config.record_video)?1:0);
+				printw("[%d] Take Snapshot  : Press 's' to take snapshot.\n", (config.take_snapshot)?1:0);
+				printw("[%d] Write Log File : Press 'l' to toggle writing.\n", (config.log_results)?1:0);
+	      printw("---------------------\n");
 				if (!output_string.empty() && (config.verbose || config.debug))
 					printw("%s", output_string.c_str());
 				printw("Press 'q' to quit.\n");
@@ -464,6 +476,10 @@ int main(int argc, char* argv[]) {
 	for (int i = 0; i < STAGE_COUNT; i++){
 		pthread_join(pthreads[i], NULL);
 	}
+
+	cout << "Total Application Runtime" << endl
+			 << "\tIncluding Setup Time  :  " << CLOCK() - total_start_with_setup << " ms" << endl
+			 << "\tWithout Setup Time    :  " << CLOCK() - total_start << " ms" << endl << endl;
 
 	// Done
 	return 0;
