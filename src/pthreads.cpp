@@ -225,13 +225,20 @@ void* output (void *ptr) {
   std::string file_name;
 
   // Will be used for img window and file writing
-  if (config.type != CAM){
+  if (config.type == VID){
     file_name = config.full_file_name;
     const std::regex slashrm(".*/");
     std::stringstream result;
     std::regex_replace(std::ostream_iterator<char>(result), file_name.begin(), file_name.end(), slashrm, "");
     file_name = result.str();
+    file_name = file_name.substr(0, file_name.find_last_of("."));
 
+  } else if (config.type != VID || config.type != CAM ){
+    file_name = config.full_file_name;
+    const std::regex slashrm(".*/");
+    std::stringstream result;
+    std::regex_replace(std::ostream_iterator<char>(result), file_name.begin(), file_name.end(), slashrm, "");
+    file_name = result.str();
   } else {
     file_name = "CAM";
   }
@@ -330,7 +337,7 @@ void* output (void *ptr) {
 
       // Write output
       std::string text;
-      if (config.type != IMG)
+      if (config.type == DTB)
         text = Packet->name;
       else // IMG use file_name
         text = file_name;
