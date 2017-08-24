@@ -5,6 +5,10 @@ using namespace std;
 using namespace caffe;
 using namespace cv;
 
+#ifdef SEQUENTIAL_ON
+	Data pnet_seq_contr;
+#endif
+
 void* pnet_thread(void *i) {
 
 	// Process received information regarding queue and scale
@@ -45,6 +49,10 @@ void* pnet_thread(void *i) {
 				Packet->processed_frame.cols*scale > 3000 ||
 				Packet->processed_frame.rows*scale < PNET_CONV_SIZE ||
 				Packet->processed_frame.rows*scale > 3000 ){
+
+#ifdef SEQUENTIAL_ON
+			pnet_seq_contr.IncreaseCounter();
+#endif
 
 			Packet->IncreaseCounter();
 			continue;
@@ -97,6 +105,10 @@ void* pnet_thread(void *i) {
 		Packet->counter++;
 		pthread_cond_signal(Packet->done);
 		pthread_mutex_unlock(Packet->mut);
+
+#ifdef SEQUENTIAL_ON
+		pnet_seq_contr.IncreaseCounter();
+#endif
 	}
 
 	// Exit
@@ -163,6 +175,10 @@ void* pnet      (void *ptr){
 
 	while (1){
 
+#ifdef SEQUENTIAL_ON
+		pnet_seq_contr.ResetCounter();
+#endif
+
 		// Read packet from queue
 		Data* Packet = ptr_queue[queue_id].Remove();
 
@@ -191,6 +207,9 @@ void* pnet      (void *ptr){
 		// Insert packet into PNET queues for processing
 		for ( int i = 0; i < factor_count; i++ ) {
 			pnet_queue[i].Insert(Packet);
+#ifdef SEQUENTIAL_ON
+			pnet_seq_contr.WaitForCounter(i+1);
+#endif
 		}
 
 		// Wait for children to finish processing

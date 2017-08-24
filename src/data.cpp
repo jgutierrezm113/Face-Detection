@@ -39,3 +39,11 @@ void Data::IncreaseCounter(void){
 	pthread_cond_signal(done);
 	pthread_mutex_unlock(mut);
 }
+
+void Data::ResetCounter(void){
+	// Increase Counter
+	pthread_mutex_lock(mut);
+	counter = 0;
+	pthread_cond_signal(done);
+	pthread_mutex_unlock(mut);
+}

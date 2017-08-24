@@ -225,7 +225,7 @@ void* output (void *ptr) {
   std::string file_name;
 
   // Will be used for img window and file writing
-  if (config.type == VID || config.type == IMG){
+  if (config.type != CAM){
     file_name = config.full_file_name;
     const std::regex slashrm(".*/");
     std::stringstream result;
@@ -233,12 +233,6 @@ void* output (void *ptr) {
     file_name = result.str();
     file_name = file_name.substr(0, file_name.find_last_of("."));
 
-  } else if (config.type != VID && config.type != CAM ){
-    file_name = config.full_file_name;
-    const std::regex slashrm(".*/");
-    std::stringstream result;
-    std::regex_replace(std::ostream_iterator<char>(result), file_name.begin(), file_name.end(), slashrm, "");
-    file_name = result.str();
   } else {
     file_name = "CAM";
   }
@@ -342,12 +336,12 @@ void* output (void *ptr) {
       else // IMG use file_name
         text = file_name;
 
-      //const std::regex slashrm(".*/");
-      /*std::stringstream result;
+      const std::regex slashrm(".*/");
+      std::stringstream result;
       std::regex_replace(std::ostream_iterator<char>(result), text.begin(), text.end(), slashrm, "");
       text = result.str();
       text = text.substr(0, text.find_last_of("."));
-      */
+
       stringstream ss;
       ss << config.output_dir << "/" << text << timestamp << ".jpg";
       string commS = ss.str();
@@ -582,6 +576,9 @@ void* output (void *ptr) {
             << height << " " << score << endl;
       }
     }
+#ifdef SEQUENTIAL_ON
+    seq_contr.IncreaseCounter();
+#endif
 
     delete Packet;
   }

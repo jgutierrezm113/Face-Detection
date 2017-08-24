@@ -32,6 +32,7 @@ class Data {
 		// Functions
 		void WaitForCounter(int num);
 		void IncreaseCounter(void);
+		void ResetCounter(void);
 
 		Data();
 		~Data();

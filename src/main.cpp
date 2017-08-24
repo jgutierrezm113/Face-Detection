@@ -16,6 +16,10 @@ double fps;
 // Shared string with output thread to print information
 string output_string;
 
+#ifdef SEQUENTIAL_ON
+	Data seq_contr;
+#endif
+
 void usage() {
 	fprintf(stderr,"\n");
 	fprintf(stderr,"Usage:  face-detector [options]\n");
@@ -271,6 +275,10 @@ int main(int argc, char* argv[]) {
 			bool finished = 0;
 			while (!finished){
 
+#ifdef SEQUENTIAL_ON
+				seq_contr.ResetCounter();
+#endif
+
 				// Wait for a little while (not full fps) before grabing next frame
 				if(config.type == VID)
 					timeout (950/fps);
@@ -354,7 +362,10 @@ int main(int argc, char* argv[]) {
 					default: {
 					}
 				}
-			}
+#ifdef SEQUENTIAL_ON
+					seq_contr.WaitForCounter(1);
+#endif
+			} // while
 
 			video.release();
 
@@ -420,6 +431,9 @@ int main(int argc, char* argv[]) {
 			std::vector<std::string>::const_iterator end(fileList.end());
 			for(;it != end; ++it) {
 
+#ifdef SEQUENTIAL_ON
+				seq_contr.ResetCounter();
+#endif
 				std::string line;
 
 				line.append(config.image_dir);
@@ -454,6 +468,11 @@ int main(int argc, char* argv[]) {
 				Packet->stage_time[STAGE_COUNT] = finish - start;
 
 				ptr_queue[0].Insert(Packet);
+
+#ifdef SEQUENTIAL_ON
+				seq_contr.WaitForCounter(1);
+#endif
+
 			}
 
 			// Finish program

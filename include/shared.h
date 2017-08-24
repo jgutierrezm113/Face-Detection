@@ -22,4 +22,8 @@ extern double fps;
 
 extern string output_string;
 
+#ifdef SEQUENTIAL_ON
+	extern Data seq_contr;
+#endif
+
 #endif
