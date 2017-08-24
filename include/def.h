@@ -6,7 +6,7 @@
 
 //#define CPU_ONLY
 
-#define SEQUENTIAL_ON
+//#define SEQUENTIAL_ON
 
 // Size of the convolution box (Don't change)
 #define PNET_CONV_SIZE 12
