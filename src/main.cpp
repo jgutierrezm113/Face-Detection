@@ -54,12 +54,12 @@ void init_conf() {
 	config.log_results   = false;
 	config.fddb_results  = false;
 	config.cam_id        = 0;
-  config.short_file_name = "CAM";
+	config.short_file_name = "CAM";
 }
 
 int parse_arguments(int argc, char** argv) {
 
-  int i = 1;
+	int i = 1;
 	while ( i < argc ) {
 		if ( strcmp(argv[i], "-h")==0 || strcmp(argv[i], "--help")==0 ) {
 			usage();
@@ -77,9 +77,9 @@ int parse_arguments(int argc, char** argv) {
 			++i;
 			config.full_file_name = argv[i];
 			if (config.type == ILL)
-      	config.type = IMG;
+				config.type = IMG;
 			// Due to OS bug
-      config.take_snapshot = true;
+			config.take_snapshot = true;
 			config.show_video    = false;
 		}
 		else if ( strcmp(argv[i], "-d") == 0 ||
@@ -90,7 +90,7 @@ int parse_arguments(int argc, char** argv) {
 			config.image_dir = argv[i];
 			config.short_file_name = argv[i];
 			if (config.type == ILL)
-      	config.type = DTB;
+				config.type = DTB;
 			// Due to OS bug
 			config.show_video    = false;
 		}
@@ -99,14 +99,14 @@ int parse_arguments(int argc, char** argv) {
 			++i;
 			config.full_file_name = argv[i];
 			if (config.type == ILL)
-      	config.type = VID;
+				config.type = VID;
 		}
 		else if ( strcmp(argv[i], "-c") == 0 ||
 							strcmp(argv[i], "--cam") == 0 ) {
 			++i;
 			config.cam_id = atoi(argv[i]);
 			if (config.type == ILL)
-      	config.type = CAM;
+				config.type = CAM;
 		}
 		else if ( strcmp(argv[i], "-nd") == 0 ||
 							strcmp(argv[i], "--nodisp") == 0 ) {
@@ -148,12 +148,12 @@ int parse_arguments(int argc, char** argv) {
 	}
 
 	if (config.type == VID || config.type == IMG ){
-	  const std::string text = config.full_file_name;
-	  const std::regex slashrm(".*/");
-	  std::stringstream result;
-	  std::regex_replace(std::ostream_iterator<char>(result), text.begin(), text.end(), slashrm, "");
-	  config.short_file_name = result.str();
-	  config.short_file_name = config.short_file_name.substr(0, config.short_file_name.find_last_of("."));
+		const std::string text = config.full_file_name;
+		const std::regex slashrm(".*/");
+		std::stringstream result;
+		std::regex_replace(std::ostream_iterator<char>(result), text.begin(), text.end(), slashrm, "");
+		config.short_file_name = result.str();
+		config.short_file_name = config.short_file_name.substr(0, config.short_file_name.find_last_of("."));
 	}
 
 	if (config.output_dir == NULL){
@@ -171,21 +171,21 @@ int parse_arguments(int argc, char** argv) {
 }
 
 void print_conf() {
-        fprintf(stderr, "\n--------------");
-        fprintf(stderr, "\nCONFIGURATION:\n");
-        fprintf(stderr, "- Processing Type %d\n", config.type);
-        fprintf(stderr, "- Show Video:     %d\n", config.show_video);
-        fprintf(stderr, "- Record Video:   %d\n", config.record_video);
-        fprintf(stderr, "- Take Snapshot:  %d\n", config.take_snapshot);
-        fprintf(stderr, "- Write Log:      %d\n", config.log_results);
-        fprintf(stderr, "- Write FDDB Log: %d\n", config.fddb_results);
-        fprintf(stderr, "- File Name:      %s\n", config.short_file_name.c_str());
-        fprintf(stderr, "- Output Dir:     %s\n", config.output_dir);
-        if (config.verbose && config.debug)
+				fprintf(stderr, "\n--------------");
+				fprintf(stderr, "\nCONFIGURATION:\n");
+				fprintf(stderr, "- Processing Type %d\n", config.type);
+				fprintf(stderr, "- Show Video:     %d\n", config.show_video);
+				fprintf(stderr, "- Record Video:   %d\n", config.record_video);
+				fprintf(stderr, "- Take Snapshot:  %d\n", config.take_snapshot);
+				fprintf(stderr, "- Write Log:      %d\n", config.log_results);
+				fprintf(stderr, "- Write FDDB Log: %d\n", config.fddb_results);
+				fprintf(stderr, "- File Name:      %s\n", config.short_file_name.c_str());
+				fprintf(stderr, "- Output Dir:     %s\n", config.output_dir);
+				if (config.verbose && config.debug)
 					fprintf(stderr, "- verbose mode\n");
-        if (config.debug)
+				if (config.debug)
 					fprintf(stderr, "- debug mode\n");
-        fprintf(stderr, "--------------\n");
+				fprintf(stderr, "--------------\n");
 }
 
 int main(int argc, char* argv[]) {
@@ -193,8 +193,8 @@ int main(int argc, char* argv[]) {
 	cv::VideoCapture video;
 	cv::Mat img;
 
-  // Timer
-  double start, finish;
+	// Timer
+	double start, finish;
 	double total_start;
 	double total_start_with_setup = CLOCK();
 
@@ -207,7 +207,7 @@ int main(int argc, char* argv[]) {
 	pthread_t* pthreads = new pthread_t [STAGE_COUNT];
 	std::vector<int> pthread_id(STAGE_COUNT);
 	for (int i = 0; i < STAGE_COUNT; i++){
-	        pthread_id[i] = i;
+					pthread_id[i] = i;
 	}
 
 	pthread_create(&pthreads[0], NULL, preprocess   , (void *)&pthread_id[0]);
@@ -232,14 +232,14 @@ int main(int argc, char* argv[]) {
 	total_start = CLOCK();
 
 	switch (config.type){
-	  case CAM:
-	  case VID: {
+		case CAM:
+		case VID: {
 
 			// Start ncurses lib
 			// Needed to process input keyboard correctly
 			initscr();
 
-      // open the video file for reading
+			// open the video file for reading
 			if (config.type == CAM){
 				video.open(config.cam_id);
 			} else {
@@ -247,14 +247,14 @@ int main(int argc, char* argv[]) {
 			}
 
 			// If not successfull, exit program
-      if (!video.isOpened()) {
-	      endwin();
-	      cout << "Cannot open the video" << endl;
+			if (!video.isOpened()) {
+				endwin();
+				cout << "Cannot open the video" << endl;
 				Data* Packet = new Data;
-	      Packet->type = END;
-	      ptr_queue[0].Insert(Packet);
-	      break;
-      }
+				Packet->type = END;
+				ptr_queue[0].Insert(Packet);
+				break;
+			}
 
 			if (config.type == CAM){
 				fps = CAM_FPS;
@@ -265,11 +265,11 @@ int main(int argc, char* argv[]) {
 				fps = video.get(CV_CAP_PROP_FPS);
 			}
 
-      double dWidth   = video.get(CV_CAP_PROP_FRAME_WIDTH); //get the width of frames of the video
-      double dHeight  = video.get(CV_CAP_PROP_FRAME_HEIGHT); //get the height of frames of the video
+			double dWidth   = video.get(CV_CAP_PROP_FRAME_WIDTH); //get the width of frames of the video
+			double dHeight  = video.get(CV_CAP_PROP_FRAME_HEIGHT); //get the height of frames of the video
 
-      bool finished = 0;
-      while (!finished){
+			bool finished = 0;
+			while (!finished){
 
 				// Wait for a little while (not full fps) before grabing next frame
 				if(config.type == VID)
@@ -277,90 +277,90 @@ int main(int argc, char* argv[]) {
 				else
 					timeout (800/fps);
 
-	      // Control screen
-	      clear();
-	      printw("Heterogeneous Framework for Face Detection \nby Julian Gutierrez\n");
-	      printw("------------------------------------------\n");
+				// Control screen
+				clear();
+				printw("Heterogeneous Framework for Face Detection \nby Julian Gutierrez\n");
+				printw("------------------------------------------\n");
 
-	      if(config.verbose || config.debug){
-          printw("Frame size        : %.2f x %.2f\n", dWidth, dHeight);
-          printw("Frame rate        : %.2f\n", fps);
+				if(config.verbose || config.debug){
+					printw("Frame size        : %.2f x %.2f\n", dWidth, dHeight);
+					printw("Frame rate        : %.2f\n", fps);
 					printw("Current Runtime   : %.3f s\n", (CLOCK() - total_start_with_setup)/1000);
-	      }
+				}
 
-	      printw("[%d] Show Video     : Press 'v' to change.\n", (config.show_video)?1:0);
-	      printw("[%d] Record Video   : Press 'r' to toggle recording.\n", (config.record_video)?1:0);
+				printw("[%d] Show Video     : Press 'v' to change.\n", (config.show_video)?1:0);
+				printw("[%d] Record Video   : Press 'r' to toggle recording.\n", (config.record_video)?1:0);
 				printw("[%d] Take Snapshot  : Press 's' to take snapshot.\n", (config.take_snapshot)?1:0);
 				printw("[%d] Write Log File : Press 'l' to toggle writing.\n", (config.log_results)?1:0);
-	      printw("---------------------\n");
+				printw("---------------------\n");
 				if (!output_string.empty() && (config.verbose || config.debug))
 					printw("%s", output_string.c_str());
 				printw("Press 'q' to quit.\n");
 
 				// Read packet
-	      Data* Packet = new Data;
+				Data* Packet = new Data;
 
 				// Record time
 				Packet->start_time = CLOCK();
 				start = CLOCK();
 
-	      bool bSuccess = video.read(Packet->frame); // read a new frame from video
+				bool bSuccess = video.read(Packet->frame); // read a new frame from video
 
-	      if (!bSuccess) {//if not success, break loop
-          printw("Cannot read a frame from video stream\n");
-          Packet->type = END;
-          ptr_queue[0].Insert(Packet);
-          break;
-	      }
+				if (!bSuccess) {//if not success, break loop
+					printw("Cannot read a frame from video stream\n");
+					Packet->type = END;
+					ptr_queue[0].Insert(Packet);
+					break;
+				}
 
-	      Packet->type = VID;
+				Packet->type = VID;
 
 				// Record time
 				finish = CLOCK();
 				Packet->stage_time[STAGE_COUNT] = finish - start;
 
-	      ptr_queue[0].Insert(Packet);
+				ptr_queue[0].Insert(Packet);
 
-	      int c = getch();
-	      switch (c){
-          case 113: { // 'q'
-            // Quit
-            Data* FinishPacket = new Data;
-            FinishPacket->type = END;
-            ptr_queue[0].Insert(FinishPacket);
-            finished = 1;
-            break;
-          }
-          case 114: { // 'r'
-            // Record Video
-            config.record_video = !config.record_video;
-            break;
-          }
-          case 115: { // 's'
-            // Take Snapshot
-            config.take_snapshot = !config.take_snapshot;
-            break;
-          }
+				int c = getch();
+				switch (c){
+					case 113: { // 'q'
+						// Quit
+						Data* FinishPacket = new Data;
+						FinishPacket->type = END;
+						ptr_queue[0].Insert(FinishPacket);
+						finished = 1;
+						break;
+					}
+					case 114: { // 'r'
+						// Record Video
+						config.record_video = !config.record_video;
+						break;
+					}
+					case 115: { // 's'
+						// Take Snapshot
+						config.take_snapshot = !config.take_snapshot;
+						break;
+					}
 					case 108: { // 'l'
-            // Take Snapshot
-            config.log_results = !config.log_results;
-            break;
-          }
-          case 118: { // 'v'
-            // Show Video
-            config.show_video = !config.show_video;
-            break;
-          }
-          default: {
-          }
-	      }
-      }
+						// Take Snapshot
+						config.log_results = !config.log_results;
+						break;
+					}
+					case 118: { // 'v'
+						// Show Video
+						config.show_video = !config.show_video;
+						break;
+					}
+					default: {
+					}
+				}
+			}
 
-      video.release();
+			video.release();
 
-      break;
-	  }
-	  case IMG: {
+			break;
+		}
+		case IMG: {
 
 			Data* Packet = new Data;
 
@@ -368,18 +368,18 @@ int main(int argc, char* argv[]) {
 			Packet->start_time = CLOCK();
 			start = CLOCK();
 
-      // open image file for reading
+			// open image file for reading
 			img = cv::imread(config.full_file_name, -1);
 			if(img.empty()){
 				//endwin();
 				cout << "Unable to decode image " << config.full_file_name << endl;
-			  Packet->type = END;
-	      ptr_queue[0].Insert(Packet);
-	      break;
+				Packet->type = END;
+				ptr_queue[0].Insert(Packet);
+				break;
 			}
 
-      img.copyTo(Packet->frame);
-      Packet->type = IMG;
+			img.copyTo(Packet->frame);
+			Packet->type = IMG;
 
 			// Record time
 			finish = CLOCK();
@@ -387,13 +387,13 @@ int main(int argc, char* argv[]) {
 
 			ptr_queue[0].Insert(Packet);
 
-      // Finish program
-      Data* FinishPacket = new Data;
-      FinishPacket->type = END;
+			// Finish program
+			Data* FinishPacket = new Data;
+			FinishPacket->type = END;
 			ptr_queue[0].Insert(FinishPacket);
 
-      break;
-	  }
+			break;
+		}
 		case DTB: {
 
 			// Setup Name of files to be processed
@@ -403,22 +403,22 @@ int main(int argc, char* argv[]) {
 
 			if(!inputFile) {
 				Data* Packet = new Data;
-		    cout << "Unable to read file correctly " << config.full_file_name << endl;
-			  Packet->type = END;
-	      ptr_queue[0].Insert(Packet);
-		    return 1;
-		  }
+				cout << "Unable to read file correctly " << config.full_file_name << endl;
+				Packet->type = END;
+				ptr_queue[0].Insert(Packet);
+				return 1;
+			}
 
 			std::string line;
 			while(std::getline(inputFile, line)) {
-		    fileList.push_back(line);
-		  }
+				fileList.push_back(line);
+			}
 
 			std::cout << "Number of images to be analyzed: " << fileList.size() << "\n";
 
 			std::vector<std::string>::const_iterator it(fileList.begin());
-		  std::vector<std::string>::const_iterator end(fileList.end());
-		  for(;it != end; ++it) {
+			std::vector<std::string>::const_iterator end(fileList.end());
+			for(;it != end; ++it) {
 
 				std::string line;
 
@@ -435,38 +435,38 @@ int main(int argc, char* argv[]) {
 				Packet->start_time = CLOCK();
 				start = CLOCK();
 
-	      // open image file for reading
+				// open image file for reading
 				img = cv::imread(line.c_str(), -1);
 
 				if(img.empty()){
 					//endwin();
 					cout << "Unable to decode image " << line.c_str() << endl;
-				  Packet->type = END;
-		      ptr_queue[0].Insert(Packet);
-		      break;
+					Packet->type = END;
+					ptr_queue[0].Insert(Packet);
+					break;
 				}
 
-	      img.copyTo(Packet->frame);
-	      Packet->type = DTB;
+				img.copyTo(Packet->frame);
+				Packet->type = DTB;
 
 				// Record time
 				finish = CLOCK();
 				Packet->stage_time[STAGE_COUNT] = finish - start;
 
 				ptr_queue[0].Insert(Packet);
-		  }
+			}
 
-      // Finish program
-      Data* FinishPacket = new Data;
-      FinishPacket->type = END;
+			// Finish program
+			Data* FinishPacket = new Data;
+			FinishPacket->type = END;
 			ptr_queue[0].Insert(FinishPacket);
 
-      break;
-	  }
-	  default: {
-      // Nothing
-      break;
-	  }
+			break;
+		}
+		default: {
+			// Nothing
+			break;
+		}
 	}
 
 	// Close ncurses

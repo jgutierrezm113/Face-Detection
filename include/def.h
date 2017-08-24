@@ -21,60 +21,60 @@
 #define STAGE_COUNT 6
 
 enum package_type { STU,  // Start Up Package
-                    IMG,  // Image Package
-                    VID,  // Video Package
-                    CAM,  // Camera Package
-                    DTB,  // Database Package
-                    END,  // Ending Package
-                    ILL}; // Illegal Package
+										IMG,  // Image Package
+										VID,  // Video Package
+										CAM,  // Camera Package
+										DTB,  // Database Package
+										END,  // Ending Package
+										ILL}; // Illegal Package
 
 typedef struct {
-  // Bounding Box
-  cv::Point2f p1;
-  cv::Point2f p2;
+	// Bounding Box
+	cv::Point2f p1;
+	cv::Point2f p2;
 
-  // Score
-  float score;
+	// Score
+	float score;
 
-  // Bounding Box Regression adjustment
-  cv::Point2f dP1;
-  cv::Point2f dP2;
+	// Bounding Box Regression adjustment
+	cv::Point2f dP1;
+	cv::Point2f dP2;
 } BBox;
 
 typedef struct {
-  cv::Point2f LE;
-  cv::Point2f RE;
-  cv::Point2f N;
-  cv::Point2f LM;
-  cv::Point2f RM;
+	cv::Point2f LE;
+	cv::Point2f RE;
+	cv::Point2f N;
+	cv::Point2f LM;
+	cv::Point2f RM;
 } Landmark;
 
 typedef struct conf {
-  package_type type;
+	package_type type;
 	bool verbose;
 	bool debug;
-  bool show_video;
-  bool record_video;
+	bool show_video;
+	bool record_video;
 
-  // To store results in log file
-  bool log_results;
-  bool fddb_results;
+	// To store results in log file
+	bool log_results;
+	bool fddb_results;
 
-  // CAM ID
-  int cam_id;
+	// CAM ID
+	int cam_id;
 
-  // Only when running
-  bool take_snapshot;
+	// Only when running
+	bool take_snapshot;
 
-  // File name for output writes
+	// File name for output writes
 	char *full_file_name;
 	std::string short_file_name;
 
-  // Database related information
+	// Database related information
 	char *image_dir;
 
-  // output directory
-  char *output_dir;
+	// output directory
+	char *output_dir;
 
 } CONF;
 

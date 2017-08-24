@@ -50,7 +50,7 @@ bool record_video;
 bool take_snapshot;
 
 // FPS variables for Output Thread
-double _avgfps		= 0;
+double _avgfps    = 0;
 double _avgdur    = 0;
 
 void* preprocess (void *ptr) {
@@ -225,7 +225,7 @@ void* output (void *ptr) {
   std::string file_name;
 
   // Will be used for img window and file writing
-  if (config.type == VID){
+  if (config.type == VID || config.type == IMG){
     file_name = config.full_file_name;
     const std::regex slashrm(".*/");
     std::stringstream result;
@@ -233,7 +233,7 @@ void* output (void *ptr) {
     file_name = result.str();
     file_name = file_name.substr(0, file_name.find_last_of("."));
 
-  } else if (config.type != VID || config.type != CAM ){
+  } else if (config.type != VID && config.type != CAM ){
     file_name = config.full_file_name;
     const std::regex slashrm(".*/");
     std::stringstream result;
@@ -341,12 +341,13 @@ void* output (void *ptr) {
         text = Packet->name;
       else // IMG use file_name
         text = file_name;
-      const std::regex slashrm(".*/");
-      std::stringstream result;
+
+      //const std::regex slashrm(".*/");
+      /*std::stringstream result;
       std::regex_replace(std::ostream_iterator<char>(result), text.begin(), text.end(), slashrm, "");
       text = result.str();
       text = text.substr(0, text.find_last_of("."));
-
+      */
       stringstream ss;
       ss << config.output_dir << "/" << text << timestamp << ".jpg";
       string commS = ss.str();
@@ -397,7 +398,7 @@ void* output (void *ptr) {
     }
 
     // Record time
-   	Packet->end_time = CLOCK();
+    Packet->end_time = CLOCK();
     finish = CLOCK();
     Packet->stage_time[queue_id] = finish - start;
 
@@ -411,7 +412,7 @@ void* output (void *ptr) {
       oss << std::setprecision(3) << std::fixed << "Data\n----" << endl;
       if (config.type != IMG){
         oss << "Average FPS :  " << _avgfps << endl
-          <<   "Average Time:  " << _avgdur << endl;
+            << "Average Time:  " << _avgdur << endl;
       }
       oss << "Total Time  :  " << total_time << endl
           << "Main Time   :  " << Packet->stage_time[6] << endl
@@ -473,6 +474,8 @@ void* output (void *ptr) {
         // Write First Array
         if (config.type == VID)
           log_ofs << local_log_frames << ",";
+        else if (config.type == IMG)
+          log_ofs << file_name << ",";
         else
           log_ofs << Packet->name << ",";
 
