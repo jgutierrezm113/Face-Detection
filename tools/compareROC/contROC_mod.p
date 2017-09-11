@@ -1,7 +1,7 @@
 # Compare your discrete ROC curves with other methods
 # At terminal: gnuplot contROC.p
 set terminal png size 1280, 960 enhanced font 'Verdana,18'
-set key font ",12"
+set key font "Verdana,20"
 set size 1,1
 set xtics 500
 set ytics 0.1
@@ -11,12 +11,11 @@ set xlabel "False positive"
 set xr [0:2000]
 set yr [0:1.0]
 set key below
-set output "contROC-compare-ours.png"
+set output "fddb-cont.png"
 plot  "rocCurves/DDFD_ContROC.txt" using 2:1 title 'DDFD' with lines lw 2 , \
 "rocCurves/CasCNN-ContROC.txt" using 2:1 title 'CascadeCNN' with lines lw 2 , \
 "rocCurves/JointCascade_ContROC.txt" using 2:1 title 'Joint Cascade' with lines lw 2 , \
 "rocCurves/ViolaJonesScore_n0_ContROC.txt" using 2:1 title 'Viola-Jones' with lines lw 2, \
-"rocCurves/MikolajczykContROC.txt" using 2:1 title 'Mikolajczyk et al.' with lines lw 2, \
 "rocCurves/MTCNN-ContROC.txt" using 2:1 title 'MTCNN' with lines lw 2, \
 "rocCurves/JGM-ContROC.txt" using 2:1 title 'Our' with lines lw 2
 
