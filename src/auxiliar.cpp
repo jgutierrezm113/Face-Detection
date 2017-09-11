@@ -159,20 +159,20 @@ void padBoundingBox(std::vector <BBox> &bounding_boxes, int imgHeight, int imgWi
 }
 
 void writeOutputImage(Data* Packet) {
-	int minl = min (Packet->frame.rows, Packet->frame.cols);
-
-	// Used so the thickness of the marks is based on the size
-	// of the image
-	int thickness = ceil((float) minl / 270.0);
 
 	for (unsigned int i = 0; i < Packet->bounding_boxes.size(); i++) {
+		int height = abs(Packet->bounding_boxes[i].p1.y - Packet->bounding_boxes[i].p2.y);
+		int width  = abs(Packet->bounding_boxes[i].p1.x - Packet->bounding_boxes[i].p2.x);
+		int minl = min (height, width);
+		int thickness = ceil(minl/32+1);
+
+		// Bounding Box
 		cv::rectangle(Packet->frame,
 									Packet->bounding_boxes[i].p1,
 									Packet->bounding_boxes[i].p2,
 									cv::Scalar(255, 255, 255),
 									thickness);
-	}
-	for (unsigned int i = 0; i < Packet->landmarks.size(); i++) {
+		// Landmarks
 		cv::circle(Packet->frame,
 							Packet->landmarks[i].LE,
 							thickness,

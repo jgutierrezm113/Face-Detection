@@ -186,7 +186,7 @@ void* postprocess (void *ptr) {
         float   iou = inter/(Narea + Parea - inter);
 
         // If Over threshold, similar enough. average them
-        if (iou > 0.3){
+        if (iou > 0.7){
           Packet->bounding_boxes[j].p1.x = (Packet->bounding_boxes[j].p1.x + Previous.bounding_boxes[k].p1.x)/2;
           Packet->bounding_boxes[j].p1.y = (Packet->bounding_boxes[j].p1.y + Previous.bounding_boxes[k].p1.y)/2;
           Packet->bounding_boxes[j].p2.x = (Packet->bounding_boxes[j].p2.x + Previous.bounding_boxes[k].p2.x)/2;
@@ -301,9 +301,15 @@ void* output (void *ptr) {
 
     // Show Display
     if (local_show_video){
-
+      cv::Mat frame;
       // Open window with detected objects
-      imshow(file_name.c_str(), Packet->frame);
+      if (config.type == CAM){
+        flip(Packet->frame, frame, 1);
+      } else {
+        frame = Packet->frame;
+      }
+
+      imshow(file_name.c_str(), frame);
       resizeWindow(file_name.c_str(), 640, 480);
 
       // FIXME: BUG in GTK wont allow to use waitKey

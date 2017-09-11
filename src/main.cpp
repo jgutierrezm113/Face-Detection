@@ -243,6 +243,9 @@ int main(int argc, char* argv[]) {
 			// Needed to process input keyboard correctly
 			initscr();
 
+			// Pause variable
+			bool pause = false;
+
 			// open the video file for reading
 			if (config.type == CAM){
 				video.open(config.cam_id);
@@ -283,7 +286,7 @@ int main(int argc, char* argv[]) {
 				if(config.type == VID)
 					timeout (950/fps);
 				else
-					timeout (800/fps);
+					timeout (500/fps);
 
 				// Control screen
 				clear();
@@ -297,6 +300,7 @@ int main(int argc, char* argv[]) {
 				}
 
 				printw("[%d] Show Video     : Press 'v' to change.\n", (config.show_video)?1:0);
+				printw("[%d] Pause Video    : Press 'p' to change.\n", (pause)?1:0);
 				printw("[%d] Record Video   : Press 'r' to toggle recording.\n", (config.record_video)?1:0);
 				printw("[%d] Take Snapshot  : Press 's' to take snapshot.\n", (config.take_snapshot)?1:0);
 				printw("[%d] Write Log File : Press 'l' to toggle writing.\n", (config.log_results)?1:0);
@@ -305,29 +309,35 @@ int main(int argc, char* argv[]) {
 					printw("%s", output_string.c_str());
 				printw("Press 'q' to quit.\n");
 
-				// Read packet
-				Data* Packet = new Data;
+				if (!pause){
+					// Read packet
+					Data* Packet = new Data;
 
-				// Record time
-				Packet->start_time = CLOCK();
-				start = CLOCK();
+					// Record time
+					Packet->start_time = CLOCK();
+					start = CLOCK();
 
-				bool bSuccess = video.read(Packet->frame); // read a new frame from video
+					bool bSuccess = video.read(Packet->frame); // read a new frame from video
 
-				if (!bSuccess) {//if not success, break loop
-					printw("Cannot read a frame from video stream\n");
-					Packet->type = END;
+					if (!bSuccess) {//if not success, break loop
+						printw("Cannot read a frame from video stream\n");
+						Packet->type = END;
+						ptr_queue[0].Insert(Packet);
+						break;
+					}
+
+					Packet->type = VID;
+
+					// Record time
+					finish = CLOCK();
+					Packet->stage_time[STAGE_COUNT] = finish - start;
+
 					ptr_queue[0].Insert(Packet);
-					break;
+	#ifdef SEQUENTIAL_ON
+						seq_contr.WaitForCounter(1);
+	#endif
+
 				}
-
-				Packet->type = VID;
-
-				// Record time
-				finish = CLOCK();
-				Packet->stage_time[STAGE_COUNT] = finish - start;
-
-				ptr_queue[0].Insert(Packet);
 
 				int c = getch();
 				switch (c){
@@ -359,12 +369,13 @@ int main(int argc, char* argv[]) {
 						config.show_video = !config.show_video;
 						break;
 					}
+					case 112: { // 'p'
+						pause = !pause;
+						break;
+					}
 					default: {
 					}
 				}
-#ifdef SEQUENTIAL_ON
-					seq_contr.WaitForCounter(1);
-#endif
 			} // while
 
 			video.release();
