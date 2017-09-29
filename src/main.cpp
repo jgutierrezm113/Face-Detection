@@ -275,18 +275,20 @@ int main(int argc, char* argv[]) {
 			double dWidth   = video.get(CV_CAP_PROP_FRAME_WIDTH); //get the width of frames of the video
 			double dHeight  = video.get(CV_CAP_PROP_FRAME_HEIGHT); //get the height of frames of the video
 
+			// TODO: Wait variable used to wait only for the remaining time to read the
+			// next FPS at the time we have too
+			nodelay(stdscr, TRUE);
+			double wait_time  = 0.0;
+			double wait_time2 = 0.0;
+
 			bool finished = 0;
 			while (!finished){
 
 #ifdef SEQUENTIAL_ON
 				seq_contr.ResetCounter();
 #endif
-
-				// Wait for a little while (not full fps) before grabing next frame
-				if(config.type == VID)
-					timeout (950/fps);
-				else
-					timeout (500/fps);
+				// TODO: Wait for a little while (not full fps) before grabing next frame
+				wait_time = CLOCK();
 
 				// Control screen
 				clear();
@@ -333,13 +335,13 @@ int main(int argc, char* argv[]) {
 					Packet->stage_time[STAGE_COUNT] = finish - start;
 
 					ptr_queue[0].Insert(Packet);
-	#ifdef SEQUENTIAL_ON
-						seq_contr.WaitForCounter(1);
-	#endif
+#ifdef SEQUENTIAL_ON
+					seq_contr.WaitForCounter(1);
+#endif
 
 				}
 
-				int c = getch();
+				int c = getch(); // Non-blocking
 				switch (c){
 					case 113: { // 'q'
 						// Quit
@@ -376,6 +378,12 @@ int main(int argc, char* argv[]) {
 					default: {
 					}
 				}
+
+				//TODO: Timing variable
+				wait_time2 = CLOCK();
+				double temp = (1000/fps)-(wait_time2-wait_time);
+				usleep (1000*max(0.0,temp));
+
 			} // while
 
 			video.release();
