@@ -21,8 +21,8 @@ class Data {
 
 		// Synchronization Variables
 		int counter;
-		pthread_mutex_t *mut;
-		pthread_cond_t *done;
+		pthread_mutex_t mut;
+		pthread_cond_t done;
 
 		// Timing variables
 		double start_time;

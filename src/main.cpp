@@ -266,6 +266,7 @@ int main(int argc, char* argv[]) {
 			if (config.type == CAM){
 				fps = CAM_FPS;
 				video.set(CV_CAP_PROP_FPS, fps);
+				video.set(CV_CAP_PROP_FOURCC, CV_FOURCC('M','J','P','G'));
 				video.set(CV_CAP_PROP_FRAME_WIDTH,FRAME_WIDTH);
 				video.set(CV_CAP_PROP_FRAME_HEIGHT,FRAME_HEIGHT);
 			} else {
@@ -516,6 +517,7 @@ int main(int argc, char* argv[]) {
 	for (int i = 0; i < STAGE_COUNT; i++){
 		pthread_join(pthreads[i], NULL);
 	}
+	delete [] pthreads;
 
 	cout << "Total Application Runtime" << endl
 			 << "\tIncluding Setup Time  :  " << CLOCK() - total_start_with_setup << " ms" << endl

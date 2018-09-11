@@ -100,11 +100,11 @@ void* pnet_thread(void *i) {
 		}
 
 		//Update Packet BBoxes
-		pthread_mutex_lock(Packet->mut);
+		pthread_mutex_lock(&Packet->mut);
 		Packet->bounding_boxes.insert(Packet->bounding_boxes.end(), chosen_boxes.begin(), chosen_boxes.end());
 		Packet->counter++;
-		pthread_cond_signal(Packet->done);
-		pthread_mutex_unlock(Packet->mut);
+		pthread_cond_signal(&Packet->done);
+		pthread_mutex_unlock(&Packet->mut);
 
 #ifdef SEQUENTIAL_ON
 		pnet_seq_contr.IncreaseCounter();
@@ -269,10 +269,10 @@ void* pnet      (void *ptr){
 	}
 
 	// Free Resources
-	free (pnet_thread_t);
-	free (pnet_info_arg);
+	delete [] pnet_thread_t;
+	delete [] pnet_info_arg;
 	// FIXME: Not sure why this free is not working
-	//free (pnet_queue);
+	delete [] pnet_queue;
 
 	// Exit
 	pthread_exit(0);

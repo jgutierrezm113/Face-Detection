@@ -15,6 +15,10 @@
 #define PNET_MAX_SCALE_COUNT 12
 
 // CAM properties
+//#define CAM_FPS 25
+//#define FRAME_WIDTH 640
+//#define FRAME_HEIGHT 480
+
 #define CAM_FPS 25
 #define FRAME_WIDTH 1920
 #define FRAME_HEIGHT 1080
